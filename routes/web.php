@@ -4,8 +4,11 @@ use App\Http\Controllers\AccountController;
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Dashboard\CampaignController;
 use App\Http\Controllers\Dashboard\CheckInController;
+use App\Http\Controllers\Dashboard\CheckInDashboardController;
+use App\Http\Controllers\Dashboard\CheckInSetupController;
 use App\Http\Controllers\Dashboard\EventController as DashEventController;
 use App\Http\Controllers\Dashboard\InsightsController;
+use App\Http\Controllers\Dashboard\OfflineCheckInController;
 use App\Http\Controllers\Dashboard\PayoutController;
 use App\Http\Controllers\Dashboard\TicketTypeController;
 use App\Http\Controllers\DashboardController;
@@ -77,6 +80,15 @@ Route::middleware('auth')->group(function () {
         Route::get('check-in/{event}', [CheckInController::class, 'scanner'])->name('check-in.scanner');
         Route::post('check-in/{event}/scan', [CheckInController::class, 'scan'])->name('check-in.scan');
         Route::get('check-in/{event}/stats', [CheckInController::class, 'stats'])->name('check-in.stats');
+        Route::get('check-in/{event}/live', [CheckInDashboardController::class, 'show'])->name('check-in.live');
+        Route::get('check-in/{event}/manifest', [OfflineCheckInController::class, 'manifest'])->middleware('throttle:12,1')->name('check-in.manifest');
+        Route::post('check-in/{event}/sync', [OfflineCheckInController::class, 'sync'])->middleware('throttle:60,1')->name('check-in.sync');
+        Route::get('check-in/{event}/setup', [CheckInSetupController::class, 'show'])->name('check-in.setup');
+        Route::post('check-in/{event}/gates', [CheckInSetupController::class, 'storeGate'])->name('check-in.gates.store');
+        Route::patch('check-in/{event}/gates/{gate}', [CheckInSetupController::class, 'updateGate'])->name('check-in.gates.update');
+        Route::delete('check-in/{event}/gates/{gate}', [CheckInSetupController::class, 'destroyGate'])->name('check-in.gates.destroy');
+        Route::post('check-in/{event}/staff', [CheckInSetupController::class, 'storeStaff'])->name('check-in.staff.store');
+        Route::delete('check-in/{event}/staff/{staff}', [CheckInSetupController::class, 'destroyStaff'])->name('check-in.staff.destroy');
 
         // Insights pages
         Route::get('tickets', [InsightsController::class, 'tickets'])->name('tickets.index');

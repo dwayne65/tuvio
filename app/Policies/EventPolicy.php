@@ -39,4 +39,11 @@ class EventPolicy
         return $user->belongsToOrganization($event->organization)
             || $event->staff()->where('user_id', $user->id)->exists();
     }
+
+    /** Live check-in dashboard: organization members and event-level gate managers. */
+    public function viewCheckInDashboard(User $user, Event $event): bool
+    {
+        return $user->belongsToOrganization($event->organization)
+            || $event->staff()->where('user_id', $user->id)->where('role', 'manager')->exists();
+    }
 }

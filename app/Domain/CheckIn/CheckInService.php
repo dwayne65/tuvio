@@ -36,7 +36,8 @@ class CheckInService
             if ($result === 'valid') {
                 $ticket->update([
                     'status' => 'used',
-                    'used_at' => now(),
+                    // Offline scans keep the time they actually happened at the gate.
+                    'used_at' => $ctx['scanned_at'] ?? now(),
                     'checked_in_by' => $scanner->id,
                 ]);
             }

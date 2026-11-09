@@ -78,6 +78,11 @@ class Event extends Model
         return $this->hasMany(EventStaff::class);
     }
 
+    public function gates(): HasMany
+    {
+        return $this->hasMany(EventGate::class)->orderBy('sort')->orderBy('id');
+    }
+
     public function getRouteKeyName(): string
     {
         return 'slug';
