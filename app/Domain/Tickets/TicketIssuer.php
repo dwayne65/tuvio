@@ -51,8 +51,11 @@ class TicketIssuer
                     ]));
                 }
 
-                // Convert the reservation into a confirmed sale.
-                $type->decrement('quantity_reserved', $item->quantity);
+                // Convert the reservation into a confirmed sale. A hold that already
+                // expired was returned to stock, so only the sale is recorded.
+                if ($order->reserved_until !== null) {
+                    $type->decrement('quantity_reserved', $item->quantity);
+                }
                 $type->increment('quantity_sold', $item->quantity);
             }
 

@@ -201,4 +201,17 @@ class EventManagementTest extends TestCase
             'sales_start_at' => now()->addWeek()->format('Y-m-d\TH:i'), 'sales_end_at' => now()->addDay()->format('Y-m-d\TH:i'),
         ])->assertSessionHasErrors(['tier', 'sales_end_at']);
     }
+
+    public function test_event_search_matches_case_insensitively(): void
+    {
+        [, $org] = $this->organizer();
+        $org->events()->create([
+            'title' => 'Kampala Jazz Night', 'slug' => 'kampala-jazz', 'status' => 'published',
+            'type' => 'physical', 'visibility' => 'public', 'start_at' => now()->addWeek(), 'currency' => 'UGX',
+        ]);
+
+        $this->get('/events?q=jazz')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->component('Events/Index', false)->has('events.data', 1));
+    }
 }

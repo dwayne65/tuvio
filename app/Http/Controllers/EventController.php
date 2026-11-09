@@ -18,10 +18,10 @@ class EventController extends Controller
 
         if ($q = $request->string('q')->trim()->value()) {
             $query->where(fn ($sub) => $sub
-                ->where('title', 'ilike', "%{$q}%")
-                ->orWhere('description', 'ilike', "%{$q}%")
-                ->orWhere('venue_name', 'ilike', "%{$q}%")
-                ->orWhere('city', 'ilike', "%{$q}%"));
+                ->whereLike('title', "%{$q}%")
+                ->orWhereLike('description', "%{$q}%")
+                ->orWhereLike('venue_name', "%{$q}%")
+                ->orWhereLike('city', "%{$q}%"));
         }
 
         if ($category = $request->string('category')->value()) {

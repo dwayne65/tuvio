@@ -100,20 +100,26 @@ class OrderService
         });
     }
 
-    /** Release inventory for an order whose reservation expired or was cancelled. */
+    /**
+     * Release inventory for an order whose reservation expired or was cancelled.
+     * Runs at most once per order: the order row is locked, and clearing
+     * `reserved_until` marks the hold as returned to stock.
+     */
     public function releaseReservation(Order $order): void
     {
-        if (in_array($order->status, ['paid', 'refunded'], true)) {
-            return;
-        }
-
         DB::transaction(function () use ($order) {
+            $order = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
+
+            if ($order->status !== 'awaiting_payment' || $order->reserved_until === null) {
+                return;
+            }
+
             foreach ($order->items as $item) {
                 TicketType::whereKey($item->ticket_type_id)
                     ->lockForUpdate()->firstOrFail()
                     ->decrement('quantity_reserved', $item->quantity);
             }
-            $order->update(['status' => 'expired']);
+            $order->update(['status' => 'expired', 'reserved_until' => null]);
         });
     }
 }

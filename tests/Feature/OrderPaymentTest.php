@@ -163,4 +163,43 @@ class OrderPaymentTest extends TestCase
         $this->assertSame('successful', $order->payments()->first()->status);
         $this->assertCount(1, $order->fresh()->tickets);
     }
+
+    public function test_expired_reservations_are_returned_to_stock_once(): void
+    {
+        [$event, $type] = $this->publishedEvent(qty: 10);
+        $expired = app(OrderService::class)->create($event, $this->buyer(), [['ticket_type_id' => $type->id, 'quantity' => 3]]);
+        $active = app(OrderService::class)->create($event, $this->buyer(), [['ticket_type_id' => $type->id, 'quantity' => 2]]);
+        $expired->update(['reserved_until' => now()->subMinute()]);
+
+        $this->artisan('orders:release-expired')->assertSuccessful();
+        $this->artisan('orders:release-expired')->assertSuccessful();
+
+        $this->assertSame('expired', $expired->fresh()->status);
+        $this->assertSame('awaiting_payment', $active->fresh()->status);
+        $this->assertSame(2, $type->fresh()->quantity_reserved);
+        $this->assertSame(8, $type->fresh()->availableQuantity());
+    }
+
+    public function test_late_payment_after_hold_expired_does_not_release_stock_twice(): void
+    {
+        [$event, $type] = $this->publishedEvent(qty: 10);
+        $late = app(OrderService::class)->create($event, $this->buyer(), [['ticket_type_id' => $type->id, 'quantity' => 2]]);
+        $other = app(OrderService::class)->create($event, $this->buyer(), [['ticket_type_id' => $type->id, 'quantity' => 3]]);
+        $late->update(['reserved_until' => now()->subMinute()]);
+        $this->artisan('orders:release-expired');
+
+        $payment = Payment::create([
+            'reference' => 'PAY-LATE', 'purpose' => 'ticket_order', 'order_id' => $late->id,
+            'provider' => 'fake', 'provider_ref' => 'FAKE-LATE', 'idempotency_key' => 'late',
+            'amount_minor' => $late->total_minor, 'currency' => 'UGX', 'status' => 'pending',
+        ]);
+        app(PaymentService::class)->verifyAndFulfill($payment);
+
+        $type->refresh();
+        $this->assertSame(2, $late->fresh()->tickets()->count());
+        $this->assertSame(2, $type->quantity_sold);
+        // The other buyer's hold is untouched.
+        $this->assertSame(3, $type->quantity_reserved);
+        $this->assertSame('awaiting_payment', $other->fresh()->status);
+    }
 }
