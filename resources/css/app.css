@@ -1,0 +1,282 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ | TicketFlow design system: "Daylight" (default) and "Midnight" (.dark).
+ | The .dark class is toggled by the visitor's local time (see lib/theme.ts),
+ | so every token below is redefined for night under `.dark`.
+ | `tint` is the foreground used for translucent lines/surfaces
+ | (near-black by day, white by night): e.g. border-tint/10, bg-tint/[0.04].
+*/
+@theme {
+    --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --font-display: 'Instrument Serif', ui-serif, Georgia, serif;
+
+    /* Brand (electric blue) */
+    --color-brand-50: #eef4ff;
+    --color-brand-100: #dce8ff;
+    --color-brand-200: #b8d2ff;
+    --color-brand-300: #2a6df0;
+    --color-brand-400: #4b8eff;
+    --color-brand-500: #2f7dff;
+    --color-brand-600: #1f63e0;
+    --color-brand-700: #1a52c0;
+    --color-brand-800: #1a4cb0;
+    --color-brand-900: #123a82;
+    --color-brand-950: #0b2150;
+
+    --color-slate-50: #f8fafc;
+    --color-slate-100: #f1f5f9;
+    --color-slate-200: #e2e8f0;
+    --color-slate-300: #cbd5e1;
+    --color-slate-400: #94a3b8;
+    --color-slate-500: #64748b;
+    --color-slate-600: #475569;
+    --color-slate-700: #334155;
+    --color-slate-800: #1e293b;
+    --color-slate-900: #0f172a;
+
+    --color-emerald-50: #ecfdf5;
+    --color-emerald-600: #059669;
+    --color-emerald-700: #047857;
+    --color-red-50: #fef2f2;
+    --color-red-200: #fecaca;
+    --color-red-700: #b91c1c;
+    --color-amber-50: #fffbeb;
+    --color-amber-600: #d97706;
+    --color-amber-700: #b45309;
+
+    --color-canvas: #f5f7fb;
+    --color-surface: #f5f7fb;
+    --color-card: #ffffff;
+    --color-card-2: #f1f4fa;
+    --color-navy: #0c0e15;
+    --color-ink: #0d1020;
+    --color-muted: #64748b;
+    --color-tint: #0d1020;
+
+    --color-success: #16a34a;
+    --color-warning: #f59e0b;
+    --color-danger: #e11d48;
+    --color-info: #2f7dff;
+
+    --radius-card: 1.5rem;
+    --shadow-card: 0 1px 2px rgb(13 16 32 / 0.04), 0 18px 40px -24px rgb(30 50 110 / 0.25);
+}
+
+/* Non-Tailwind design variables (day) */
+:root {
+    --shadow-premium: 0 1px 2px rgb(13 16 32 / 0.05), 0 30px 60px -30px rgb(30 50 110 / 0.35);
+    --glass-bg: rgb(255 255 255 / 0.72);
+    --glow-a: rgb(47 125 255 / 0.12);
+    --glow-b: rgb(47 125 255 / 0.06);
+}
+
+/* Night palette */
+.dark {
+    --color-brand-50: #0f1b36;
+    --color-brand-100: #13244a;
+    --color-brand-200: #b8d2ff;
+    --color-brand-300: #8db8ff;
+    --color-brand-400: #5f9cff;
+    --color-brand-600: #4b8eff;
+    --color-brand-700: #2565e0;
+
+    --color-slate-50: #111319;
+    --color-slate-100: #171a22;
+    --color-slate-200: #232733;
+    --color-slate-300: #353a49;
+    --color-slate-400: #7d849a;
+    --color-slate-500: #959cb0;
+    --color-slate-600: #b2b8c8;
+    --color-slate-700: #cdd2de;
+    --color-slate-800: #e1e4ec;
+    --color-slate-900: #f0f2f7;
+
+    --color-emerald-50: #0d2620;
+    --color-emerald-600: #34d399;
+    --color-emerald-700: #6ee7b7;
+    --color-red-50: #2c1216;
+    --color-red-200: #5c2129;
+    --color-red-700: #fca5a5;
+    --color-amber-50: #2a1f0b;
+    --color-amber-600: #fbbf24;
+    --color-amber-700: #fcd34d;
+
+    --color-canvas: #07080c;
+    --color-surface: #07080c;
+    --color-card: #12141b;
+    --color-card-2: #1a1d26;
+    --color-ink: #f3f5fa;
+    --color-muted: #959cb0;
+    --color-tint: #ffffff;
+
+    --color-success: #22c55e;
+    --color-danger: #f43f5e;
+
+    --shadow-card: inset 0 1px 0 rgb(255 255 255 / 0.04), 0 24px 48px -28px rgb(0 0 0 / 0.9);
+    --shadow-premium: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 30px 70px -30px rgb(0 0 0 / 0.95);
+    --glass-bg: rgb(20 22 30 / 0.62);
+    --glow-a: rgb(47 125 255 / 0.14);
+    --glow-b: rgb(47 125 255 / 0.07);
+}
+
+@layer base {
+    html {
+        font-family: var(--font-sans);
+        color-scheme: light;
+        -webkit-tap-highlight-color: transparent;
+    }
+    html.dark {
+        color-scheme: dark;
+    }
+    body {
+        background-color: var(--color-canvas);
+        color: var(--color-ink);
+        transition: background-color 0.6s ease, color 0.6s ease;
+        overflow-x: clip;
+    }
+    /* Ambient glow on its own fixed layer (fixed backgrounds misrender beside backdrop blur) */
+    body::before {
+        position: fixed;
+        inset: 0;
+        z-index: -1;
+        pointer-events: none;
+        content: '';
+        background:
+            radial-gradient(60rem 40rem at 110% -10%, var(--glow-a), transparent 60%),
+            radial-gradient(40rem 30rem at -20% 10%, var(--glow-b), transparent 60%);
+    }
+    * {
+        border-color: color-mix(in srgb, var(--color-tint) 8%, transparent);
+    }
+    ::selection {
+        background: rgb(47 125 255 / 0.45);
+        color: white;
+    }
+    select option {
+        background: var(--color-card);
+        color: var(--color-ink);
+    }
+}
+
+@layer components {
+    .container-page {
+        @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+    }
+
+    /* Frosted dark glass */
+    .glass {
+        background: var(--glass-bg);
+        backdrop-filter: blur(20px) saturate(160%);
+        -webkit-backdrop-filter: blur(20px) saturate(160%);
+        border: 1px solid color-mix(in srgb, var(--color-tint) 8%, transparent);
+    }
+
+    .text-gradient {
+        background: linear-gradient(100deg, #2f7dff, #5f9cff 55%, #2565e0);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+    }
+    .dark .text-gradient {
+        background-image: linear-gradient(100deg, #b8d2ff, #5f9cff 45%, #2f7dff);
+    }
+
+    .elevate {
+        box-shadow: var(--shadow-card);
+    }
+
+    .shadow-premium {
+        box-shadow: var(--shadow-premium);
+    }
+
+    .glow-blue {
+        box-shadow: 0 12px 34px -12px rgb(47 125 255 / 0.85);
+    }
+
+    .surface-panel {
+        border: 1px solid color-mix(in srgb, var(--color-tint) 8%, transparent);
+        background: color-mix(in srgb, var(--color-card) 85%, transparent);
+        box-shadow: var(--shadow-card);
+        backdrop-filter: blur(16px);
+    }
+
+    .dot-grid {
+        background-image: radial-gradient(rgb(255 255 255 / 0.12) 1px, transparent 1px);
+        background-size: 18px 18px;
+    }
+
+    .bg-grid {
+        background-image: radial-gradient(rgb(95 156 255 / 0.12) 1px, transparent 1px);
+        background-size: 22px 22px;
+    }
+
+    .ticket-notch { position: relative; }
+
+    .ticket-notch::before,
+    .ticket-notch::after {
+        position: absolute;
+        top: 50%;
+        z-index: 2;
+        height: 1.25rem;
+        width: 1.25rem;
+        transform: translateY(-50%);
+        border-radius: 9999px;
+        background: var(--color-canvas);
+        content: '';
+    }
+
+    .ticket-notch::before { left: -0.7rem; }
+    .ticket-notch::after { right: -0.7rem; }
+
+    /* Horizontal scroller (chips, carousels) without a visible scrollbar */
+    .scroller {
+        scrollbar-width: none;
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
+    }
+    .scroller::-webkit-scrollbar { display: none; }
+    .scroller > * { scroll-snap-align: start; }
+
+    /* Room for the floating mobile tab bar + iOS home indicator */
+    .pb-tabbar {
+        padding-bottom: calc(6.5rem + env(safe-area-inset-bottom));
+    }
+}
+
+@layer utilities {
+    .preserve-3d { transform-style: preserve-3d; }
+    .perspective { perspective: 1000px; }
+    .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+}
+
+@keyframes aurora {
+    0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+    50% { transform: translate3d(6%, -4%, 0) scale(1.15); }
+}
+.aurora { animation: aurora 14s ease-in-out infinite; }
+.aurora-slow { animation: aurora 22s ease-in-out infinite; }
+
+@keyframes shimmer {
+    100% { transform: translateX(100%); }
+}
+
+@keyframes float-y {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+.float-y { animation: float-y 6s ease-in-out infinite; }
+
+@keyframes wave {
+    0%, 60%, 100% { transform: rotate(0deg); }
+    10%, 30% { transform: rotate(14deg); }
+    20% { transform: rotate(-8deg); }
+    40% { transform: rotate(-4deg); }
+    50% { transform: rotate(10deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .aurora, .aurora-slow, .float-y { animation: none; }
+}

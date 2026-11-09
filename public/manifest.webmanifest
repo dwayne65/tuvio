@@ -1,0 +1,9 @@
+{
+  "name": "TicketFlow",
+  "short_name": "TicketFlow",
+  "theme_color": "#2f7dff",
+  "background_color": "#f5f7fb",
+  "display": "standalone",
+  "start_url": "/",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}
