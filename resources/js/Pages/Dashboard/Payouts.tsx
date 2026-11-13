@@ -8,22 +8,27 @@ import { formatDate, money } from '@/lib/utils';
 import { PageProps } from '@/types';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowUpRight, Building2, Plus, Smartphone, Wallet } from 'lucide-react';
+import { AlertCircle, ArrowUpRight, Building2, Loader2, Plus, Smartphone, Star, Trash2, Wallet } from 'lucide-react';
 import { FormEvent, useState } from 'react';
 
-type Account = { id: number; type: string; provider: string | null; label: string | null; is_default: boolean; verification_status: string };
-type Payout = { reference: string; amount_minor: number; currency: string; status: string; requested_at: string | null; processed_at: string | null };
+type Account = { id: number; type: string; provider: string | null; label: string | null; is_default: boolean; account_name: string; masked_number: string; verification_status: string };
+type Payout = { reference: string; amount_minor: number; currency: string; status: string; destination: string | null; reason: string | null; requested_at: string | null; processed_at: string | null };
 
 const tone: Record<string, 'success' | 'warning' | 'danger' | 'neutral'> = {
-    paid: 'success', requested: 'warning', pending: 'warning', processing: 'warning', failed: 'danger',
+    paid: 'success', requested: 'warning', pending: 'warning', processing: 'warning', failed: 'danger', cancelled: 'neutral',
 };
 
-export default function Payouts({ available_minor, currency, accounts, payouts }: PageProps<{
-    available_minor: number; currency: string; accounts: Account[]; payouts: Payout[];
+const statusLabel: Record<string, string> = {
+    requested: 'In review', pending: 'In review', processing: 'Sending', paid: 'Paid', failed: 'Failed', cancelled: 'Rejected',
+};
+
+export default function Payouts({ available_minor, currency, has_open_payout, accounts, payouts }: PageProps<{
+    available_minor: number; currency: string; has_open_payout: boolean; accounts: Account[]; payouts: Payout[];
 }>) {
     const { app } = usePage<PageProps>().props;
     const [adding, setAdding] = useState(false);
-    const acc = useForm({ type: 'mobile_money', provider: 'MTN', label: '', account_name: '', account_number: '' });
+    const acc = useForm({ type: 'mobile_money', provider: 'MTN', label: '', account_name: '', account_number: '', bank_code: '' });
+    const isBank = acc.data.type === 'bank';
     const canRequest = available_minor > 0 && accounts.length > 0;
 
     function addAccount(e: FormEvent) {
@@ -38,7 +43,7 @@ export default function Payouts({ available_minor, currency, accounts, payouts }
             <div className="grid gap-5 lg:grid-cols-[1.3fr_1fr]">
                 {/* Balance */}
                 <Reveal>
-                    <div className="relative h-full overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-[#10162e] via-[#13244a] to-brand-700 p-6 text-white shadow-premium sm:p-7">
+                    <div className="relative h-full overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-[#0b1030] via-[#24115e] to-brand-700 p-6 text-white shadow-premium sm:p-7">
                         <div className="absolute -right-16 -top-20 h-64 w-64 rounded-full bg-brand-400/30 blur-3xl" />
                         <div className="relative">
                             <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-white/60">Available for payout</p>
@@ -55,6 +60,11 @@ export default function Payouts({ available_minor, currency, accounts, payouts }
                                 Request payout <ArrowUpRight className="h-4 w-4" />
                             </Button>
                             {accounts.length === 0 && <p className="mt-3 text-sm text-amber-300">Add a payout account first.</p>}
+                            {has_open_payout && (
+                                <p className="mt-3 flex items-center gap-2 text-sm text-white/70">
+                                    <Loader2 className="h-4 w-4 animate-spin" /> A payout is on its way. Mobile Money usually lands within minutes of approval.
+                                </p>
+                            )}
                         </div>
                     </div>
                 </Reveal>
@@ -75,10 +85,26 @@ export default function Payouts({ available_minor, currency, accounts, payouts }
                                         {a.type === 'bank' ? <Building2 className="h-[18px] w-[18px]" /> : <Smartphone className="h-[18px] w-[18px]" />}
                                     </span>
                                     <div className="min-w-0 flex-1">
-                                        <p className="truncate text-sm font-semibold text-ink">{a.label || a.provider || a.type}</p>
-                                        <p className="text-xs capitalize text-slate-400">{a.type.replace('_', ' ')}</p>
+                                        <p className="truncate text-sm font-semibold text-ink">{a.label || a.account_name}</p>
+                                        <p className="truncate text-xs text-slate-400">
+                                            {a.provider ?? (a.type === 'bank' ? 'Bank' : 'Mobile Money')} · <span className="font-mono">{a.masked_number}</span>
+                                        </p>
                                     </div>
-                                    {a.is_default && <Badge tone="brand">Default</Badge>}
+                                    {a.is_default ? (
+                                        <Badge tone="brand">Default</Badge>
+                                    ) : (
+                                        <Button variant="ghost" size="sm" title="Make default" onClick={() => router.post(`/dashboard/payouts/accounts/${a.id}/default`, {}, { preserveScroll: true })}>
+                                            <Star className="h-4 w-4" />
+                                        </Button>
+                                    )}
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        title="Remove account"
+                                        onClick={() => window.confirm(`Remove ${a.label || a.account_name} (${a.masked_number})?`) && router.delete(`/dashboard/payouts/accounts/${a.id}`, { preserveScroll: true })}
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
                                 </div>
                             ))}
                         </div>
@@ -95,15 +121,30 @@ export default function Payouts({ available_minor, currency, accounts, payouts }
                                     <div className="mt-3 space-y-3 rounded-2xl border border-brand-500/25 bg-brand-500/5 p-4">
                                         <div className="grid grid-cols-2 gap-3">
                                             <Field label="Type">
-                                                <Select value={acc.data.type} onChange={(e) => acc.setData('type', e.target.value)}>
+                                                <Select value={acc.data.type} onChange={(e) => acc.setData({ ...acc.data, type: e.target.value, provider: e.target.value === 'bank' ? '' : 'MTN' })}>
                                                     <option value="mobile_money">Mobile Money</option>
                                                     <option value="bank">Bank</option>
                                                 </Select>
                                             </Field>
-                                            <Field label="Provider" error={acc.errors.provider}><Input value={acc.data.provider} onChange={(e) => acc.setData('provider', e.target.value)} /></Field>
+                                            {isBank ? (
+                                                <Field label="Bank" error={acc.errors.provider}><Input value={acc.data.provider} onChange={(e) => acc.setData('provider', e.target.value)} placeholder="Stanbic" required /></Field>
+                                            ) : (
+                                                <Field label="Network" error={acc.errors.provider}>
+                                                    <Select value={acc.data.provider} onChange={(e) => acc.setData('provider', e.target.value)}>
+                                                        <option value="MTN">MTN MoMo</option>
+                                                        <option value="Airtel">Airtel Money</option>
+                                                    </Select>
+                                                </Field>
+                                            )}
                                         </div>
-                                        <Field label="Account name" error={acc.errors.account_name}><Input value={acc.data.account_name} onChange={(e) => acc.setData('account_name', e.target.value)} autoComplete="name" /></Field>
-                                        <Field label="Account number" error={acc.errors.account_number}><Input inputMode="numeric" value={acc.data.account_number} onChange={(e) => acc.setData('account_number', e.target.value)} /></Field>
+                                        <Field label={isBank ? 'Account name' : 'Name registered on the number'} error={acc.errors.account_name}><Input value={acc.data.account_name} onChange={(e) => acc.setData('account_name', e.target.value)} autoComplete="name" required /></Field>
+                                        <Field label={isBank ? 'Account number' : 'Mobile Money number'} error={acc.errors.account_number}>
+                                            <Input inputMode={isBank ? 'numeric' : 'tel'} value={acc.data.account_number} onChange={(e) => acc.setData('account_number', e.target.value)} placeholder={isBank ? '9030012345678' : '0772 123456'} required />
+                                        </Field>
+                                        {isBank && (
+                                            <Field label="Branch or SWIFT code (optional)" error={acc.errors.bank_code}><Input value={acc.data.bank_code} onChange={(e) => acc.setData('bank_code', e.target.value)} /></Field>
+                                        )}
+                                        {!isBank && <p className="text-xs text-slate-500">Payouts are sent straight to this number. Double-check it: money sent to a wrong number can't be recalled.</p>}
                                         <div className="flex gap-2">
                                             <Button type="submit" size="sm" disabled={acc.processing}>Save account</Button>
                                             <Button type="button" size="sm" variant="ghost" onClick={() => setAdding(false)}>Cancel</Button>
@@ -129,11 +170,19 @@ export default function Payouts({ available_minor, currency, accounts, payouts }
                                     </span>
                                     <div className="min-w-0 flex-1">
                                         <p className="truncate font-mono text-xs text-slate-500">{p.reference}</p>
-                                        <p className="text-sm text-slate-500">{p.requested_at ? formatDate(p.requested_at) : '—'}</p>
+                                        <p className="truncate text-sm text-slate-500">
+                                            {p.requested_at ? formatDate(p.requested_at) : '—'}
+                                            {p.destination && <> · to {p.destination}</>}
+                                        </p>
+                                        {p.reason && (
+                                            <p className="mt-1 flex items-start gap-1.5 text-xs text-rose-400">
+                                                <AlertCircle className="mt-px h-3.5 w-3.5 shrink-0" /> {p.reason} The money is back in your balance.
+                                            </p>
+                                        )}
                                     </div>
                                     <div className="flex shrink-0 flex-col items-end gap-1">
                                         <span className="text-sm font-bold text-ink">{money(p.amount_minor, p.currency)}</span>
-                                        <Badge tone={tone[p.status] ?? 'neutral'}>{p.status}</Badge>
+                                        <Badge tone={tone[p.status] ?? 'neutral'}>{statusLabel[p.status] ?? p.status}</Badge>
                                     </div>
                                 </li>
                             ))}

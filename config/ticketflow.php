@@ -29,6 +29,13 @@ return [
     // Days after an event ends before organizer earnings become eligible for payout.
     'payout_settlement_days' => (int) env('TICKETFLOW_PAYOUT_SETTLEMENT_DAYS', 7),
 
+    // How approved organizer payouts leave the platform. "paytota" sends Mobile Money
+    // payouts through the Paytota disbursement API; "manual" means an admin pays them
+    // outside TUVIO (and bank payouts are always manual) and records the reference.
+    'payouts' => [
+        'driver' => env('PAYOUT_DRIVER', 'manual'),
+    ],
+
     // One-time codes emailed at sign-in, on top of the password (and the authenticator
     // app, where one is set up). Admins always get them; so do members of these plans.
     'email_login_codes' => [
@@ -69,6 +76,9 @@ return [
             // Offer Mobile Money at checkout. Keep false until Paytota has enabled a
             // Mobile Money terminal for the brand, otherwise every attempt is cancelled.
             'mobile_money' => (bool) env('PAYTOTA_MOBILE_MONEY', true),
+            // Payout status callbacks go to the webhook set up in the Paytota dashboard, which
+            // may sign with its own key. Falls back to public_key when left empty.
+            'webhook_public_key' => str_replace('\n', "\n", (string) env('PAYTOTA_WEBHOOK_PUBLIC_KEY')),
         ],
     ],
 

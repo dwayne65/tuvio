@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Domain\Ledger\PlatformEarnings;
+use App\Domain\Payouts\PayoutRejected;
 use App\Domain\Payouts\PayoutService;
 use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
 use App\Models\Campaign;
 use App\Models\Event;
 use App\Models\Order;
@@ -13,12 +15,13 @@ use App\Models\Payment;
 use App\Models\Payout;
 use App\Models\Ticket;
 use App\Models\User;
-use App\Notifications\PayoutPaidNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
+use RuntimeException;
 
 class AdminController extends Controller
 {
@@ -83,24 +86,95 @@ class AdminController extends Controller
         ]);
     }
 
-    public function payouts(): Response
+    public function payouts(PayoutService $payouts): Response
     {
         return Inertia::render('Admin/Payouts', [
-            'payouts' => Payout::with('organization')->latest()->paginate(20)
-                ->through(fn ($p) => ['id' => $p->id, 'reference' => $p->reference, 'organization' => $p->organization->name, 'amount_minor' => $p->amount_minor, 'currency' => $p->currency, 'status' => $p->status, 'requested_at' => $p->requested_at?->toIso8601String()]),
+            'driver' => config('ticketflow.payouts.driver'),
+            'payouts' => Payout::with('organization', 'payoutAccount')->latest()->paginate(20)
+                ->through(fn (Payout $p) => [
+                    'id' => $p->id, 'reference' => $p->reference, 'organization' => $p->organization->name,
+                    'amount_minor' => $p->amount_minor, 'currency' => $p->currency, 'status' => $p->status,
+                    'provider' => $p->provider, 'provider_ref' => $p->provider_ref, 'notes' => $p->notes,
+                    'automatic' => $payouts->canSendAutomatically($p),
+                    // Admins need the full destination to pay manually or to check a transfer.
+                    'account' => $p->payoutAccount ? [
+                        'type' => $p->payoutAccount->type, 'provider' => $p->payoutAccount->provider,
+                        'account_name' => $p->payoutAccount->account_name, 'account_number' => $p->payoutAccount->account_number,
+                        'bank_code' => $p->payoutAccount->bank_code,
+                    ] : null,
+                    'requested_at' => $p->requested_at?->toIso8601String(),
+                    'processed_at' => $p->processed_at?->toIso8601String(),
+                ]),
         ]);
     }
 
+    /**
+     * Approves a requested payout: Mobile Money goes out through Paytota when that driver
+     * is on, otherwise the admin has paid it by hand and records the transfer reference.
+     */
     public function approvePayout(Request $request, Payout $payout, PayoutService $payouts): RedirectResponse
     {
-        abort_unless(in_array($payout->status, ['requested', 'pending', 'processing'], true), 422);
+        abort_unless($payout->status === 'requested', 422);
+        $automatic = $payouts->canSendAutomatically($payout);
 
-        $payouts->markPaid($payout, $request->user()->id, $request->input('provider_ref'));
+        $data = $request->validate([
+            'provider_ref' => [$automatic ? 'nullable' : 'required', 'string', 'max:120'],
+            // Moving money out needs the password again, even inside a verified session.
+            'password' => ['required', 'current_password'],
+        ]);
 
-        if ($payout->organization->owner) {
-            $payout->organization->owner->notify(new PayoutPaidNotification($payout));
+        try {
+            $payout = $automatic
+                ? $payouts->send($payout, $request->user()->id)
+                : $payouts->markPaid($payout, $request->user()->id, $data['provider_ref']);
+        } catch (PayoutRejected $e) {
+            return back()->with('error', "Paytota refused payout {$payout->reference}: {$e->getMessage()}");
+        } catch (RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        } finally {
+            $this->audit($request, $payout->fresh(), $automatic ? 'admin.payout_sent' : 'admin.payout_marked_paid');
         }
 
-        return back()->with('success', "Payout {$payout->reference} marked as paid.");
+        return back()->with('success', match ($payout->status) {
+            'paid' => "Payout {$payout->reference} is paid.",
+            'failed' => "Payout {$payout->reference} was declined: {$payout->notes}",
+            default => "Payout {$payout->reference} sent to Paytota. It will be marked paid when the transfer is confirmed.",
+        });
+    }
+
+    public function refreshPayout(Payout $payout, PayoutService $payouts): RedirectResponse
+    {
+        try {
+            $payout = $payouts->refreshStatus($payout);
+        } catch (RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', "Payout {$payout->reference} is {$payout->status}.");
+    }
+
+    /** Declines a requested payout and returns its funds to the organizer's balance. */
+    public function rejectPayout(Request $request, Payout $payout, PayoutService $payouts): RedirectResponse
+    {
+        abort_unless($payout->status === 'requested', 422);
+        $data = $request->validate(['reason' => ['required', 'string', 'max:500']]);
+
+        $payout = $payouts->markFailed($payout, $data['reason']);
+        $this->audit($request, $payout, 'admin.payout_rejected');
+
+        return back()->with('success', "Payout {$payout->reference} rejected; the funds are back in the organizer's balance.");
+    }
+
+    private function audit(Request $request, Payout $payout, string $action): void
+    {
+        AuditLog::create([
+            'user_id' => $request->user()->id,
+            'action' => $action,
+            'auditable_type' => Payout::class,
+            'auditable_id' => $payout->id,
+            'new_values' => ['status' => $payout->status, 'amount_minor' => $payout->amount_minor, 'provider_ref' => $payout->provider_ref, 'notes' => $payout->notes],
+            'ip_address' => $request->ip(),
+            'user_agent' => Str::limit((string) $request->userAgent(), 255, ''),
+        ]);
     }
 }

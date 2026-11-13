@@ -168,6 +168,8 @@ Route::middleware('auth')->group(function () {
         // Payouts
         Route::get('payouts', [PayoutController::class, 'index'])->name('payouts.index');
         Route::post('payouts/accounts', [PayoutController::class, 'storeAccount'])->name('payouts.accounts.store');
+        Route::post('payouts/accounts/{account}/default', [PayoutController::class, 'makeDefault'])->name('payouts.accounts.default');
+        Route::delete('payouts/accounts/{account}', [PayoutController::class, 'destroyAccount'])->name('payouts.accounts.destroy');
         Route::post('payouts/request', [PayoutController::class, 'request'])->name('payouts.request');
     });
 
@@ -185,7 +187,9 @@ Route::middleware('auth')->group(function () {
         Route::get('organizers', [AdminController::class, 'organizers'])->name('organizers');
         Route::get('transactions', [AdminController::class, 'transactions'])->name('transactions');
         Route::get('payouts', [AdminController::class, 'payouts'])->name('payouts');
-        Route::post('payouts/{payout}/approve', [AdminController::class, 'approvePayout'])->name('payouts.approve');
+        Route::post('payouts/{payout}/approve', [AdminController::class, 'approvePayout'])->middleware('throttle:10,1')->name('payouts.approve');
+        Route::post('payouts/{payout}/refresh', [AdminController::class, 'refreshPayout'])->middleware('throttle:30,1')->name('payouts.refresh');
+        Route::post('payouts/{payout}/reject', [AdminController::class, 'rejectPayout'])->name('payouts.reject');
         Route::get('support', [SupportInboxController::class, 'index'])->name('support.index');
         Route::post('support/{reference}/reply', [SupportInboxController::class, 'reply'])->name('support.reply');
         Route::post('support/{reference}/close', [SupportInboxController::class, 'close'])->name('support.close');
