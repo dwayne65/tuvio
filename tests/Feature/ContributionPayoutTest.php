@@ -124,7 +124,7 @@ class ContributionPayoutTest extends TestCase
         $this->assertSame(9500000, $payout->amount_minor);
         $this->assertSame(0, $svc->availableMinor($this->org->fresh())); // nothing left eligible
 
-        $admin = User::factory()->create(['is_admin' => true]);
+        $admin = User::factory()->admin()->create();
         $svc->markPaid($payout, $admin->id);
 
         $this->assertSame('paid', $payout->fresh()->status);
@@ -137,7 +137,7 @@ class ContributionPayoutTest extends TestCase
     {
         $this->actingAs($this->owner)->get('/admin')->assertForbidden();
 
-        $admin = User::factory()->create(['is_admin' => true]);
+        $admin = User::factory()->admin()->create();
         $this->actingAs($admin)->get('/admin')->assertOk();
     }
 }

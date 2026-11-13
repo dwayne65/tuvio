@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Domain\Auth\TwoFactorAuthenticator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -14,11 +15,23 @@ use Inertia\Response;
 
 class ProfileController extends Controller
 {
-    public function edit(Request $request): Response
+    public function edit(Request $request, TwoFactorAuthenticator $twoFactor): Response
     {
+        $user = $request->user();
+        $pending = $user->two_factor_secret !== null && $user->two_factor_confirmed_at === null;
+
         return Inertia::render('Settings/Profile', [
-            'mustVerifyEmail' => ! $request->user()->hasVerifiedEmail(),
+            'mustVerifyEmail' => ! $user->hasVerifiedEmail(),
             'status' => session('status'),
+            'twoFactor' => [
+                'enabled' => $user->hasTwoFactorEnabled(),
+                // Admins confirm sign-ins with an emailed code; the app is only required when those are off.
+                'required' => $user->is_admin && ! config('ticketflow.email_login_codes.enabled'),
+                'pending' => $pending,
+                'qrSvg' => $pending ? $twoFactor->qrCodeSvg($user, $user->two_factor_secret) : null,
+                'setupKey' => $pending ? $user->two_factor_secret : null,
+                'recoveryCodes' => session('twoFactorRecoveryCodes'),
+            ],
         ]);
     }
 

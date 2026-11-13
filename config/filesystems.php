@@ -41,7 +41,8 @@ return [
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),
-            'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
+            // Root-relative so uploads load on whichever host serves the page (domain, LAN IP, app WebView).
+            'url' => '/storage',
             'visibility' => 'public',
             'throw' => false,
             'report' => false,

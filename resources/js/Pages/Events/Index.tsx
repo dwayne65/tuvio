@@ -52,8 +52,8 @@ export default function EventsIndex({ events, categories, filters }: PageProps<P
                         <input
                             value={q}
                             onChange={(e) => setQ(e.target.value)}
-                            placeholder="Search events, artists, venues"
-                            className="h-[3.25rem] w-full rounded-full border border-tint/10 bg-tint/[0.05] pl-11 pr-10 text-[15px] text-ink placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
+                            placeholder="Events, artists, venues"
+                            className="h-[3.25rem] w-full rounded-full border border-tint/10 bg-tint/[0.05] pl-11 pr-9 text-[15px] text-ink placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
                         />
                         {q && (
                             <button
@@ -69,7 +69,7 @@ export default function EventsIndex({ events, categories, filters }: PageProps<P
                             </button>
                         )}
                     </label>
-                    <button type="submit" className="h-[3.25rem] shrink-0 rounded-full bg-brand-500 px-6 text-sm font-bold text-white glow-blue active:scale-95">
+                    <button type="submit" className="h-[3.25rem] shrink-0 rounded-full bg-brand-500 px-5 text-sm sm:px-6 font-bold text-white glow-blue active:scale-95">
                         Search
                     </button>
                 </form>
@@ -95,7 +95,7 @@ export default function EventsIndex({ events, categories, filters }: PageProps<P
                     <Chip active={!filters.category} onClick={() => apply({ category: '' })}>All</Chip>
                     {categories.map((c) => (
                         <Chip key={c.id} active={filters.category === c.slug} onClick={() => apply({ category: c.slug })}>
-                            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: c.color ?? '#2f7dff' }} />
+                            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: c.color ?? '#6418f5' }} />
                             {c.name}
                         </Chip>
                     ))}

@@ -2,9 +2,13 @@
 
 namespace App\Providers;
 
+use App\Domain\Sms\AfricasTalkingSmsSender;
+use App\Domain\Sms\LogSmsSender;
+use App\Domain\Sms\SmsSender;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Validation\Rules\Password;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -13,7 +17,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(SmsSender::class, fn () => match (config('ticketflow.sms.driver')) {
+            'africastalking' => new AfricasTalkingSmsSender(config('ticketflow.sms.africastalking')),
+            default => new LogSmsSender,
+        });
     }
 
     /**
@@ -24,7 +31,14 @@ class AppServiceProvider extends ServiceProvider
         // Keep this app's dev-server marker isolated from stale workspace hot files.
         $hotFile = public_path('hot-ticketflow');
 
-        if (is_file($hotFile)) {
+        // The dev server only listens on this machine, so visitors arriving through a
+        // tunnel or the LAN (e.g. a phone) must always get the compiled build.
+        $isLocalVisitor = $this->app->runningInConsole()
+            || in_array(request()->getHost(), ['localhost', '127.0.0.1', '::1'], true);
+
+        if (! $isLocalVisitor) {
+            $hotFile = storage_path('framework/vite-unavailable');
+        } elseif (is_file($hotFile)) {
             $hotUrl = trim((string) file_get_contents($hotFile));
             $host = parse_url($hotUrl, PHP_URL_HOST);
             $port = parse_url($hotUrl, PHP_URL_PORT) ?: 5173;
@@ -43,9 +57,17 @@ class AppServiceProvider extends ServiceProvider
 
         Vite::useHotFile($hotFile);
 
-        // Platform administrators bypass all authorization checks.
+        // Platform administrators bypass all authorization checks, but only once
+        // their account is protected by two-factor authentication.
         Gate::before(function ($user) {
-            return $user->is_admin ? true : null;
+            return $user->is_admin && $user->hasTwoFactorEnabled() ? true : null;
+        });
+
+        // Long, mixed passwords; in production also refuse ones exposed in known breaches.
+        Password::defaults(function () {
+            $rule = Password::min(12)->letters()->mixedCase()->numbers()->symbols();
+
+            return $this->app->isProduction() ? $rule->uncompromised() : $rule;
         });
     }
 }

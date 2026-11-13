@@ -16,7 +16,7 @@ class TicketPdf
     public function render(Ticket|Collection $tickets): DomPdf
     {
         $tickets = $tickets instanceof Ticket ? new Collection([$tickets]) : $tickets;
-        $tickets->loadMissing(['event.organization', 'ticketType', 'orderItem']);
+        $tickets->loadMissing(['event.organization', 'event.category', 'ticketType', 'orderItem']);
 
         $passes = $tickets->map(fn (Ticket $t) => [
             'ticket' => $t,

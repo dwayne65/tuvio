@@ -22,13 +22,19 @@ class OrganizationPolicy
         return $user->canManageOrganization($org);
     }
 
+    /** Discounts, promoters and campaigns. */
+    public function manageMarketing(User $user, Organization $org): bool
+    {
+        return $user->roleIn($org)?->canManageMarketing() ?? false;
+    }
+
     public function manageFinances(User $user, Organization $org): bool
     {
-        return in_array($user->roleIn($org), ['owner', 'admin', 'finance'], true);
+        return $user->roleIn($org)?->canManageFinances() ?? false;
     }
 
     public function requestPayout(User $user, Organization $org): bool
     {
-        return in_array($user->roleIn($org), ['owner', 'finance'], true);
+        return $user->roleIn($org)?->canRequestPayouts() ?? false;
     }
 }

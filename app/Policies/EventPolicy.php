@@ -15,12 +15,12 @@ class EventPolicy
 
     public function create(User $user, Organization $org): bool
     {
-        return $user->canManageOrganization($org);
+        return $user->roleIn($org)?->canManageEvents() ?? false;
     }
 
     public function update(User $user, Event $event): bool
     {
-        return in_array($user->roleIn($event->organization), ['owner', 'admin', 'manager'], true);
+        return $user->roleIn($event->organization)?->canManageEvents() ?? false;
     }
 
     public function delete(User $user, Event $event): bool

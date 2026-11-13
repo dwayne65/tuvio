@@ -34,6 +34,20 @@ class UserFactory extends Factory
     }
 
     /**
+     * A platform administrator with two-factor authentication confirmed,
+     * which the admin area requires.
+     */
+    public function admin(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_admin' => true,
+            'two_factor_secret' => 'JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP',
+            'two_factor_recovery_codes' => json_encode(['abcde-12345', 'fghij-67890']),
+            'two_factor_confirmed_at' => now(),
+        ]);
+    }
+
+    /**
      * Indicate that the model's email address should be unverified.
      */
     public function unverified(): static

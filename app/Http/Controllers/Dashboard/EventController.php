@@ -8,10 +8,13 @@ use App\Http\Controllers\Controller;
 use App\Models\Event;
 use App\Models\EventCategory;
 use App\Models\TicketType;
+use App\Models\User;
+use App\Notifications\ApprovalRequestedNotification;
 use App\Support\CurrentOrganization;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -19,7 +22,7 @@ use Inertia\Response;
 
 class EventController extends Controller
 {
-    public function __construct(private EventService $events) {}
+    public function __construct(private EventService $events, private SubscriptionService $subscriptions) {}
 
     public function index(Request $request): Response|RedirectResponse
     {
@@ -54,6 +57,7 @@ class EventController extends Controller
         return Inertia::render('Dashboard/Events/Create', [
             'categories' => EventCategory::where('is_active', true)->orderBy('sort')->get(['id', 'name', 'slug']),
             'currency' => $org->default_currency,
+            'commission_bps' => $org->commissionBps(),
         ]);
     }
 
@@ -94,6 +98,7 @@ class EventController extends Controller
             'event' => [
                 'id' => $event->id, 'title' => $event->title, 'slug' => $event->slug,
                 'description' => $event->description, 'status' => $event->status,
+                'review_note' => $event->status === 'rejected' ? $event->review_note : null,
                 'type' => $event->type, 'visibility' => $event->visibility,
                 'event_category_id' => $event->event_category_id,
                 'start_at' => $event->start_at?->format('Y-m-d\TH:i'),
@@ -101,7 +106,9 @@ class EventController extends Controller
                 'venue_name' => $event->venue_name, 'venue_address' => $event->venue_address,
                 'city' => $event->city, 'online_url' => $event->online_url,
                 'currency' => $event->currency, 'refund_policy' => $event->refund_policy,
+                'fee_payer' => $event->fee_payer, 'commission_bps' => $event->commissionBps(),
                 'cover_url' => $event->cover_url,
+                'sell_on_ussd' => $event->sell_on_ussd,
                 'public_url' => route('events.show', $event->slug),
                 'ticket_types' => $event->ticketTypes->map(fn ($t) => [
                     'id' => $t->id, 'name' => $t->name, 'kind' => $t->kind, 'tier' => $t->resolvedTier(),
@@ -114,6 +121,7 @@ class EventController extends Controller
                 ]),
             ],
             'categories' => EventCategory::where('is_active', true)->orderBy('sort')->get(['id', 'name', 'slug']),
+            'ussd' => $this->subscriptions->ussdEvents($event->organization),
         ]);
     }
 
@@ -147,12 +155,32 @@ class EventController extends Controller
         $this->authorize('publish', $event);
 
         try {
-            $this->events->publish($event);
+            $this->events->submitForReview($event);
         } catch (\RuntimeException $e) {
             return back()->with('error', $e->getMessage());
         }
 
-        return back()->with('success', 'Event published! It is now live and discoverable.');
+        rescue(fn () => Notification::send(
+            User::where('is_admin', true)->get(),
+            new ApprovalRequestedNotification('event', $event->title, $event->organization->name),
+        ));
+
+        return back()->with('success', 'Submitted for review. Your event goes live as soon as an admin approves it, and we will email you.');
+    }
+
+    /** Switch USSD sales on or off for this event. */
+    public function updateUssd(Request $request, Event $event): RedirectResponse
+    {
+        $this->authorize('update', $event);
+        $enabled = $request->boolean('sell_on_ussd');
+
+        try {
+            $this->events->setSellOnUssd($event, $enabled);
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', $enabled ? 'Buyers can now get tickets for this event over USSD.' : 'This event is no longer sold over USSD.');
     }
 
     public function unpublish(Request $request, Event $event): RedirectResponse
@@ -205,6 +233,7 @@ class EventController extends Controller
             'online_url' => ['nullable', 'url'],
             'currency' => ['nullable', 'string', 'size:3'],
             'refund_policy' => ['nullable', 'string'],
+            'fee_payer' => ['sometimes', Rule::in(Event::FEE_PAYERS)],
             'cover' => ['nullable', 'image', 'max:4096'],
         ]);
     }

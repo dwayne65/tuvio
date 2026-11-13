@@ -2,6 +2,7 @@
 
 namespace App\Domain\Tickets;
 
+use App\Domain\Sms\SmsSender;
 use App\Mail\TicketsIssuedMail;
 use App\Models\Order;
 use App\Models\Ticket;
@@ -13,10 +14,12 @@ use Illuminate\Support\Str;
 
 class TicketIssuer
 {
+    public function __construct(private SmsSender $sms) {}
+
     /**
      * Issue one ticket per purchased seat for a paid order. Idempotent: if the
      * order already has tickets it returns them without issuing duplicates.
-     * Newly issued tickets are emailed to the buyer once the transaction commits.
+     * Newly issued tickets are emailed and texted to the buyer once the transaction commits.
      *
      * @return Collection<int,Ticket>
      */
@@ -59,7 +62,10 @@ class TicketIssuer
                 $type->increment('quantity_sold', $item->quantity);
             }
 
-            DB::afterCommit(fn () => $this->emailBuyer($order));
+            DB::afterCommit(function () use ($order) {
+                $this->emailBuyer($order);
+                $this->textBuyer($order);
+            });
 
             return $tickets;
         });
@@ -78,6 +84,62 @@ class TicketIssuer
         } catch (\Throwable $e) {
             report($e);
         }
+    }
+
+    /**
+     * Text the buyer a link to their tickets. The outcome is kept on the order; a failed SMS
+     * is reported but never breaks fulfilment, since the tickets are also emailed.
+     */
+    private function textBuyer(Order $order): void
+    {
+        $to = $this->internationalNumber($order->buyer_phone);
+        if (! $to) {
+            return;
+        }
+
+        try {
+            $order = $order->fresh(['event', 'tickets']);
+            $result = $this->sms->send($to, $this->ticketMessage($order));
+        } catch (\Throwable $e) {
+            report($e);
+
+            return;
+        }
+
+        $order->update(['meta' => [...($order->meta ?? []), 'sms' => array_filter([
+            'to' => $to,
+            'status' => $result->sent ? 'sent' : 'failed',
+            'message_id' => $result->messageId,
+            'error' => $result->error,
+            'at' => now()->toIso8601String(),
+        ])]]);
+
+        if (! $result->sent) {
+            report(new \RuntimeException("Ticket SMS for order {$order->reference} failed: {$result->error}"));
+        }
+    }
+
+    /** One SMS (160 characters) where possible: what, when, the order and where to find the QR codes. */
+    private function ticketMessage(Order $order): string
+    {
+        $count = $order->tickets->count();
+        $event = Str::limit($order->event->title, 40, '...');
+        // Event times are stored as the organizer's local time, as on the PDF ticket and email.
+        $when = $order->event->start_at?->format('j M, g:ia');
+
+        return "Tuvio: {$count} ".Str::plural('ticket', $count)." for {$event}".($when ? " ({$when})" : '')
+            .". Order {$order->reference}. Show the QR at the gate: ".route('checkout.complete', $order->reference);
+    }
+
+    /** "0772 123456" or "256772123456" becomes "+256772123456"; anything too short is skipped. */
+    private function internationalNumber(?string $phone): ?string
+    {
+        $digits = preg_replace('/\D/', '', (string) $phone);
+        if (strlen($digits) < 9) {
+            return null;
+        }
+
+        return '+'.(str_starts_with($digits, '0') ? config('ticketflow.sms.dialing_code').substr($digits, 1) : $digits);
     }
 
     private function uniqueCode(): string

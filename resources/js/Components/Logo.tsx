@@ -1,17 +1,30 @@
-import { Ticket } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-/** `light` is kept for call-site compatibility; the mark is always drawn for the dark canvas. */
-export function Logo({ className, light: _light = false }: { className?: string; light?: boolean }) {
+type Variant = 'full' | 'mark' | 'tagline';
+
+const sources: Record<Exclude<Variant, 'mark'>, { light: string; dark: string; ratio: string }> = {
+    full: { light: '/brand/tuvio-logo.png', dark: '/brand/tuvio-logo-dark.png', ratio: 'aspect-[576/160]' },
+    tagline: { light: '/brand/tuvio-logo-tagline.png', dark: '/brand/tuvio-logo-tagline-dark.png', ratio: 'aspect-[1195/320]' },
+};
+
+/**
+ * TUVIO brand logo. `full` is the mark + wordmark, `tagline` adds "Life Happens Here.",
+ * `mark` is the T-ticket icon alone. The wordmark swaps to a white version in night mode.
+ * Size it with a height class, e.g. `h-8`.
+ */
+export function Logo({ variant = 'full', className }: { variant?: Variant; className?: string }) {
+    if (variant === 'mark') {
+        return <img src="/brand/tuvio-mark.png" alt="TUVIO" className={cn('h-9 w-auto select-none', className)} draggable={false} />;
+    }
+
+    const src = sources[variant];
+
     return (
-        <span className={cn('inline-flex items-center gap-2.5 font-extrabold tracking-tight', className)}>
-            <span className="relative grid h-9 w-9 -rotate-6 place-items-center overflow-hidden rounded-[0.8rem] bg-gradient-to-br from-brand-400 to-brand-700 text-white glow-blue">
-                <span className="absolute inset-x-0 top-0 h-1/2 bg-white/15" />
-                <Ticket className="relative h-[18px] w-[18px] rotate-6" strokeWidth={2.4} />
-            </span>
-            <span className="text-[1.1rem] tracking-[-0.03em] text-ink">
-                Ticket<span className="font-display text-[1.3rem] font-normal italic tracking-normal text-brand-300">Flow</span>
-            </span>
+        <span className={cn('relative inline-block h-9 select-none', src.ratio, className)}>
+            <img src={src.light} alt="TUVIO" className="h-full w-full object-contain dark:hidden" draggable={false} />
+            <img src={src.dark} alt="TUVIO" className="hidden h-full w-full object-contain dark:block" draggable={false} />
         </span>
     );
 }
+
+export const BRAND = { name: 'TUVIO', tagline: 'Life Happens Here.' } as const;

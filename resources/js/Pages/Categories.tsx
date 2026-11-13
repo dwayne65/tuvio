@@ -32,7 +32,7 @@ export default function Categories({ categories }: PageProps<{ categories: Cat[]
                             >
                                 <span
                                     className="grid h-12 w-12 place-items-center rounded-xl text-white"
-                                    style={{ backgroundColor: c.color ?? '#2f7dff' }}
+                                    style={{ backgroundColor: c.color ?? '#6418f5' }}
                                 >
                                     <Icon className="h-6 w-6" />
                                 </span>

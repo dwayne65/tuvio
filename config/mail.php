@@ -65,6 +65,12 @@ return [
             'transport' => 'resend',
         ],
 
+        // Second Resend account, used when the first key is revoked or out of credits.
+        'resend_backup' => [
+            'transport' => 'resend',
+            'key' => env('RESEND_BACKUP_API_KEY'),
+        ],
+
         'sendmail' => [
             'transport' => 'sendmail',
             'path' => env('MAIL_SENDMAIL_PATH', '/usr/sbin/sendmail -bs -i'),
@@ -81,10 +87,10 @@ return [
 
         'failover' => [
             'transport' => 'failover',
-            'mailers' => [
-                'smtp',
-                'log',
-            ],
+            'mailers' => array_filter([
+                'resend',
+                env('RESEND_BACKUP_API_KEY') ? 'resend_backup' : null,
+            ]),
             'retry_after' => 60,
         ],
 

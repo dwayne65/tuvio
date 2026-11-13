@@ -21,6 +21,7 @@ class EventManagementTest extends TestCase
     {
         $user = User::factory()->create();
         $this->actingAs($user)->post('/organizations', ['name' => 'Acme Events']);
+        Organization::where('status', Organization::STATUS_PENDING)->update(['status' => Organization::STATUS_ACTIVE]);
 
         return [$user, Organization::first()];
     }
@@ -51,6 +52,20 @@ class EventManagementTest extends TestCase
         $this->assertNotNull($event);
         $this->assertSame('draft', $event->status);
         $this->assertSame(1, $event->ticketTypes()->count());
+    }
+
+    public function test_organizer_chooses_who_pays_the_fee(): void
+    {
+        [$user] = $this->organizer();
+
+        $this->actingAs($user)->post('/dashboard/events', $this->eventPayload(['fee_payer' => 'buyer']))->assertSessionHasNoErrors();
+        $event = Event::first();
+        $this->assertSame('buyer', $event->fee_payer);
+
+        $this->actingAs($user)->patch("/dashboard/events/{$event->slug}", [...$this->eventPayload(), 'fee_payer' => 'organizer'])->assertSessionHasNoErrors();
+        $this->assertSame('organizer', $event->fresh()->fee_payer);
+
+        $this->actingAs($user)->patch("/dashboard/events/{$event->slug}", [...$this->eventPayload(), 'fee_payer' => 'nobody'])->assertSessionHasErrors('fee_payer');
     }
 
     public function test_event_creation_persists_all_details_ticket_types_and_cover(): void
@@ -102,14 +117,10 @@ class EventManagementTest extends TestCase
         $this->assertSame('draft', $event->fresh()->status);
     }
 
-    public function test_publish_succeeds_with_subscription(): void
+    public function test_publishing_submits_the_event_for_admin_review(): void
     {
         [$user, $org] = $this->organizer();
-        $plan = SubscriptionPlan::create([
-            'name' => 'Starter', 'slug' => 'starter', 'price_minor' => 0, 'currency' => 'UGX',
-            'interval' => 'monthly', 'trial_days' => 0, 'event_limit' => 3, 'is_active' => true,
-        ]);
-        app(SubscriptionService::class)->subscribe($org, $plan);
+        $this->starterPlan($org);
 
         $this->actingAs($user)->post('/dashboard/events', $this->eventPayload());
         $event = Event::first();
@@ -117,8 +128,59 @@ class EventManagementTest extends TestCase
         $this->actingAs($user)->post("/dashboard/events/{$event->slug}/publish")
             ->assertSessionHas('success');
 
-        $this->assertSame('published', $event->fresh()->status);
-        $this->assertNotNull($event->fresh()->published_at);
+        $this->assertSame('in_review', $event->fresh()->status);
+        $this->assertNull($event->fresh()->published_at);
+        $this->actingAs(User::factory()->create())->get("/events/{$event->slug}")->assertNotFound();
+        $this->actingAs($user)->get("/events/{$event->slug}")->assertOk();
+    }
+
+    public function test_admin_approval_puts_the_event_live(): void
+    {
+        [$user, $org] = $this->organizer();
+        $this->starterPlan($org);
+        $this->actingAs($user)->post('/dashboard/events', $this->eventPayload());
+        $event = Event::first();
+        $this->actingAs($user)->post("/dashboard/events/{$event->slug}/publish");
+
+        $this->actingAs($user)->post("/admin/events/{$event->slug}/approve")->assertForbidden();
+        $this->assertSame('in_review', $event->fresh()->status);
+
+        $admin = User::factory()->admin()->create();
+        $this->actingAs($admin)->post("/admin/events/{$event->slug}/approve")->assertSessionHas('success');
+
+        $event->refresh();
+        $this->assertSame('published', $event->status);
+        $this->assertNotNull($event->published_at);
+        $this->assertSame($admin->id, $event->reviewed_by);
+    }
+
+    public function test_admin_rejection_returns_the_event_with_a_note(): void
+    {
+        [$user, $org] = $this->organizer();
+        $this->starterPlan($org);
+        $this->actingAs($user)->post('/dashboard/events', $this->eventPayload());
+        $event = Event::first();
+        $this->actingAs($user)->post("/dashboard/events/{$event->slug}/publish");
+
+        $admin = User::factory()->admin()->create();
+        $this->actingAs($admin)->post("/admin/events/{$event->slug}/reject", ['reason' => ''])->assertSessionHasErrors('reason');
+        $this->actingAs($admin)->post("/admin/events/{$event->slug}/reject", ['reason' => 'Add a real venue.'])->assertSessionHas('success');
+
+        $this->assertSame('rejected', $event->fresh()->status);
+        $this->assertSame('Add a real venue.', $event->fresh()->review_note);
+
+        // The organizer can fix it and resubmit.
+        $this->actingAs($user)->post("/dashboard/events/{$event->slug}/publish")->assertSessionHas('success');
+        $this->assertSame('in_review', $event->fresh()->status);
+    }
+
+    private function starterPlan(Organization $org): void
+    {
+        $plan = SubscriptionPlan::create([
+            'name' => 'Starter', 'slug' => 'starter', 'price_minor' => 0, 'currency' => 'UGX',
+            'interval' => 'monthly', 'trial_days' => 0, 'event_limit' => 3, 'is_active' => true,
+        ]);
+        app(SubscriptionService::class)->subscribeToFree($org, $plan);
     }
 
     public function test_only_members_can_manage_events(): void

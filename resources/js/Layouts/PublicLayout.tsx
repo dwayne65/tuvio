@@ -1,3 +1,4 @@
+import { Toaster } from '@/Components/app/Toaster';
 import { Logo } from '@/Components/Logo';
 import { MobileTabBar } from '@/Components/MobileTabBar';
 import { Button } from '@/Components/ui/Button';
@@ -19,12 +20,15 @@ export default function PublicLayout({
     children,
     immersive = false,
     hideTabBar = false,
+    floatingNav = false,
 }: {
     children: ReactNode;
     /** Hide the mobile app bar so the page can draw its own over a hero. */
     immersive?: boolean;
     /** Hide the mobile tab bar, e.g. when the page shows its own sticky action bar. */
     hideTabBar?: boolean;
+    /** Keep the frosted nav even at the top, for pages that open on a full-bleed visual. */
+    floatingNav?: boolean;
 }) {
     const { auth } = usePage<PageProps>().props;
     const path = usePage().url.split('?')[0];
@@ -50,13 +54,13 @@ export default function PublicLayout({
                 <div
                     className={cn(
                         'mx-auto flex h-16 max-w-7xl items-center justify-between px-4 transition-all duration-300 md:h-[3.75rem] md:rounded-full md:border md:px-3 md:pl-5 lg:max-w-[76rem]',
-                        scrolled
+                        scrolled || floatingNav
                             ? 'border-b border-tint/[0.06] bg-canvas/75 backdrop-blur-2xl md:border-tint/10 md:bg-card/70 md:shadow-premium'
                             : 'border-transparent md:border-tint/[0.06] md:bg-tint/[0.03] md:backdrop-blur-xl',
                     )}
                 >
-                    <Link href="/" aria-label="TicketFlow home">
-                        <Logo />
+                    <Link href="/" aria-label="TUVIO home" className="shrink-0">
+                        <Logo className="h-8 md:h-9" />
                     </Link>
 
                     <nav className="hidden items-center gap-1 md:flex">
@@ -68,7 +72,7 @@ export default function PublicLayout({
                                     href={item.href}
                                     className={cn(
                                         'rounded-full px-4 py-2 text-[13px] font-semibold transition-colors',
-                                        active ? 'bg-tint/[0.08] text-ink' : 'text-slate-500 hover:text-ink',
+                                        active ? 'bg-brand-500/10 text-brand-300' : 'text-slate-500 hover:bg-brand-500/[0.07] hover:text-brand-300',
                                     )}
                                 >
                                     {item.label}
@@ -132,6 +136,10 @@ export default function PublicLayout({
                                     {item.label}
                                 </Link>
                             ))}
+                            <div className="mx-4 mt-1 flex gap-4 border-t border-tint/[0.06] pt-3 pb-1 text-xs font-semibold text-slate-400">
+                                <Link href="/terms" onClick={() => setOpen(false)} className="hover:text-ink">Terms</Link>
+                                <Link href="/privacy" onClick={() => setOpen(false)} className="hover:text-ink">Privacy</Link>
+                            </div>
                             {!auth.user && (
                                 <div className="mt-1 grid grid-cols-2 gap-2 p-2">
                                     <Button href="/login" variant="outline">Log in</Button>
@@ -149,9 +157,9 @@ export default function PublicLayout({
                 <div className="pointer-events-none absolute -right-24 -top-32 h-80 w-80 rounded-full bg-brand-500/15 blur-3xl" />
                 <div className="container-page relative grid grid-cols-2 gap-8 py-16 md:grid-cols-5">
                     <div className="col-span-2">
-                        <Logo />
+                        <Logo variant="tagline" className="h-14" />
                         <p className="mt-4 max-w-xs text-sm text-slate-400">
-                            Every event. Every ticket. One platform. Discover, create and sell tickets across Africa and beyond.
+                            Concerts, conferences, parties and everything in between. Discover, create and sell tickets across Africa and beyond.
                         </p>
                         <p className="mt-6 font-display text-3xl italic text-slate-600">See you out there.</p>
                     </div>
@@ -161,13 +169,14 @@ export default function PublicLayout({
                 </div>
                 <div className="border-t border-tint/[0.06]">
                     <div className="container-page flex items-center justify-between gap-2 py-6 text-sm text-slate-400">
-                        <span>© {new Date().getFullYear()} TicketFlow. All rights reserved.</span>
+                        <span>© {new Date().getFullYear()} TUVIO. Life Happens Here.</span>
                         <span>Mobile Money · Visa · Mastercard</span>
                     </div>
                 </div>
             </footer>
 
             {!hideTabBar && <MobileTabBar />}
+            <Toaster />
         </div>
     );
 }

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Organization;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -14,6 +15,8 @@ class InsightsTest extends TestCase
     {
         $user = User::factory()->create();
         $this->actingAs($user)->post('/organizations', ['name' => 'Acme Events']);
+        Organization::where('status', Organization::STATUS_PENDING)->update(['status' => Organization::STATUS_ACTIVE]);
+        $this->onPaidPlan($user->ownedOrganizations()->firstOrFail());
 
         return $user;
     }
@@ -38,7 +41,7 @@ class InsightsTest extends TestCase
 
     public function test_admin_dashboard_renders(): void
     {
-        $admin = User::factory()->create(['is_admin' => true]);
+        $admin = User::factory()->admin()->create();
         $this->actingAs($admin)->get('/admin')->assertOk();
     }
 }

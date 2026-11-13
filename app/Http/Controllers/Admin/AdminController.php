@@ -2,12 +2,11 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Domain\Ledger\ChartOfAccounts;
+use App\Domain\Ledger\PlatformEarnings;
 use App\Domain\Payouts\PayoutService;
 use App\Http\Controllers\Controller;
 use App\Models\Campaign;
 use App\Models\Event;
-use App\Models\LedgerAccount;
 use App\Models\Order;
 use App\Models\Organization;
 use App\Models\Payment;
@@ -26,7 +25,7 @@ class AdminController extends Controller
     public function dashboard(): Response
     {
         $gmv = (int) Order::where('status', 'paid')->sum('total_minor');
-        $commission = $this->platformBalance(ChartOfAccounts::COMMISSION_INCOME);
+        $earnings = app(PlatformEarnings::class)->summary(config('ticketflow.default_currency'));
 
         // 30-day platform GMV series (zero-filled).
         $orders = Order::where('status', 'paid')->where('paid_at', '>=', now()->subDays(30))->get(['total_minor', 'paid_at']);
@@ -45,7 +44,10 @@ class AdminController extends Controller
                 'events' => Event::where('status', 'published')->count(),
                 'tickets_sold' => Ticket::whereIn('status', ['issued', 'used'])->count(),
                 'gmv_minor' => $gmv,
-                'platform_revenue_minor' => $commission,
+                'platform_revenue_minor' => $earnings['earned'],
+                'commission_minor' => $earnings['commission'] + $earnings['service_fees'],
+                'subscriptions_minor' => $earnings['subscriptions'],
+                'available_minor' => $earnings['available'],
                 'contributions_minor' => (int) Campaign::sum('raised_minor'),
                 'pending_payouts_minor' => (int) Payout::whereIn('status', ['requested', 'pending', 'processing'])->sum('amount_minor'),
             ],
@@ -100,12 +102,5 @@ class AdminController extends Controller
         }
 
         return back()->with('success', "Payout {$payout->reference} marked as paid.");
-    }
-
-    private function platformBalance(string $code): int
-    {
-        $account = LedgerAccount::whereNull('owner_type')->where('code', $code)->first();
-
-        return $account ? $account->balanceMinor() : 0;
     }
 }

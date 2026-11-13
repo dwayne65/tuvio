@@ -19,8 +19,8 @@ class Event extends Model
         'cover_image_path', 'status', 'visibility', 'type',
         'start_at', 'end_at', 'timezone',
         'venue_name', 'venue_address', 'city', 'country', 'latitude', 'longitude', 'online_url',
-        'currency', 'commission_bps', 'refund_policy',
-        'capacity', 'is_featured', 'published_at',
+        'currency', 'commission_bps', 'fee_payer', 'refund_policy',
+        'capacity', 'is_featured', 'published_at', 'sell_on_ussd',
     ];
 
     protected function casts(): array
@@ -29,13 +29,56 @@ class Event extends Model
             'start_at' => 'datetime',
             'end_at' => 'datetime',
             'published_at' => 'datetime',
+            'review_requested_at' => 'datetime',
+            'reviewed_at' => 'datetime',
             'latitude' => 'decimal:7',
             'longitude' => 'decimal:7',
             'is_featured' => 'boolean',
+            'sell_on_ussd' => 'boolean',
             'commission_bps' => 'integer',
             'capacity' => 'integer',
             'views_count' => 'integer',
         ];
+    }
+
+    /** Who covers the platform fee on paid tickets. */
+    public const FEE_PAYERS = ['organizer', 'buyer'];
+
+    /** The platform fee rate in basis points: event override, then the organizer's rate or plan. */
+    public function commissionBps(): int
+    {
+        return (int) ($this->commission_bps ?? $this->organization->commissionBps());
+    }
+
+    public function passesFeeToBuyer(): bool
+    {
+        return $this->fee_payer === 'buyer';
+    }
+
+    /**
+     * Split the platform fee for an amount after discounts. The organizer either absorbs it as
+     * commission, or the buyer pays it on top as a booking fee and the organizer keeps the full price.
+     *
+     * Tax on the fee goes with it: the buyer pays it on a booking fee, the organizer on commission.
+     *
+     * @return array{commission_minor: int, fee_minor: int, tax_minor: int}
+     */
+    public function platformFee(int $amountMinor): array
+    {
+        $fee = (int) round(max(0, $amountMinor) * $this->commissionBps() / 10000);
+        $tax = (int) round($fee * (int) config('ticketflow.tax.bps') / 10000);
+
+        return $this->passesFeeToBuyer()
+            ? ['commission_minor' => 0, 'fee_minor' => $fee, 'tax_minor' => $tax]
+            : ['commission_minor' => $fee, 'fee_minor' => 0, 'tax_minor' => $tax];
+    }
+
+    /** What a buyer pays on top of the tickets: the booking fee and its tax, when the fee is passed on. */
+    public function buyerCharges(int $amountMinor): int
+    {
+        ['fee_minor' => $fee, 'tax_minor' => $tax] = $this->platformFee($amountMinor);
+
+        return $this->passesFeeToBuyer() ? $fee + $tax : 0;
     }
 
     public function organization(): BelongsTo
@@ -83,6 +126,11 @@ class Event extends Model
         return $this->hasMany(EventGate::class)->orderBy('sort')->orderBy('id');
     }
 
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(EventReview::class);
+    }
+
     public function getRouteKeyName(): string
     {
         return 'slug';
@@ -103,6 +151,17 @@ class Event extends Model
     public function isPublished(): bool
     {
         return $this->status === 'published';
+    }
+
+    /** Submitted by the organizer and waiting for a platform admin to approve it. */
+    public function isInReview(): bool
+    {
+        return $this->status === 'in_review';
+    }
+
+    public function reviewer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reviewed_by');
     }
 
     /** Publicly discoverable events. */

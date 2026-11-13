@@ -114,6 +114,46 @@ class OrderPaymentTest extends TestCase
             ->whereHas('account', fn ($q) => $q->where('code', 'COMMISSION_INCOME'))->sum('amount_minor'));
     }
 
+    public function test_buyer_pays_the_fee_on_top_and_organizer_keeps_the_full_price(): void
+    {
+        [$event, $type] = $this->publishedEvent(priceMinor: 10000000); // 100,000.00
+        $event->update(['fee_payer' => 'buyer']);
+        $order = app(OrderService::class)->create($event, $this->buyer(), [['ticket_type_id' => $type->id, 'quantity' => 2]]);
+
+        // subtotal 200,000.00 ; 5% booking fee 10,000.00 added for the buyer ; no commission off the organizer
+        $this->assertSame(20000000, $order->subtotal_minor);
+        $this->assertSame(1000000, $order->fee_minor);
+        $this->assertSame(0, $order->commission_minor);
+        $this->assertSame(21000000, $order->total_minor);
+        $this->assertSame(20000000, $order->organizerNetMinor());
+
+        $payment = Payment::create([
+            'reference' => 'PAY-FEE', 'purpose' => 'ticket_order', 'order_id' => $order->id,
+            'provider' => 'fake', 'provider_ref' => 'FAKE-FEE', 'idempotency_key' => 'kfee',
+            'amount_minor' => $order->total_minor, 'currency' => 'UGX', 'status' => 'pending',
+        ]);
+        $this->assertTrue(app(PaymentService::class)->verifyAndFulfill($payment));
+
+        $txn = LedgerTransaction::where('type', 'ticket_sale')->firstOrFail();
+        $this->assertTrue($txn->isBalanced());
+        $credit = fn (string $code) => (int) $txn->entries()->where('direction', 'credit')
+            ->whereHas('account', fn ($q) => $q->where('code', $code))->sum('amount_minor');
+        $this->assertSame(1000000, $credit('SERVICE_FEE_INCOME'));
+        $this->assertSame(0, $credit('COMMISSION_INCOME'));
+        $this->assertSame(20000000, $credit('ORGANIZER_PAYABLE'));
+    }
+
+    public function test_organizer_pays_the_fee_by_default(): void
+    {
+        [$event, $type] = $this->publishedEvent(priceMinor: 10000000);
+        $order = app(OrderService::class)->create($event, $this->buyer(), [['ticket_type_id' => $type->id, 'quantity' => 1]]);
+
+        $this->assertSame('organizer', $event->fresh()->fee_payer);
+        $this->assertSame(0, $order->fee_minor);
+        $this->assertSame(10000000, $order->total_minor);
+        $this->assertSame(9500000, $order->organizerNetMinor());
+    }
+
     public function test_fulfillment_is_idempotent(): void
     {
         [$event, $type] = $this->publishedEvent();

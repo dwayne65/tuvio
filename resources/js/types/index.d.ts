@@ -36,6 +36,7 @@ export interface EventSummary {
     price_from: Money | null;
     is_free: boolean;
     is_featured: boolean;
+    availability: 'on_sale' | 'selling_fast' | 'sold_out' | 'not_on_sale';
 }
 
 export interface Plan {
@@ -53,10 +54,11 @@ export type SharedProps = {
     auth: {
         user: User | null;
         organizations?: { id: number; name: string; slug: string; role: string }[];
-        currentOrganization?: { id: number; name: string; slug: string } | null;
+        currentOrganization?: { id: number; name: string; slug: string; status: string; plan: { name: string; slug: string; capabilities: string[]; team_member_limit: number | null } | null } | null;
     };
     flash: { success: string | null; error: string | null };
-    app: { name: string; currency: string; demo_mode?: boolean };
+    admin?: { pending_approvals: number } | null;
+    app: { name: string; currency: string; demo_mode?: boolean; tax: { bps: number; label: string } };
     notifications: { unread: number };
 };
 

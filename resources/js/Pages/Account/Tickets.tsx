@@ -5,7 +5,7 @@ import { cn, formatDate, money } from '@/lib/utils';
 import { PageProps } from '@/types';
 import { Head, Link } from '@inertiajs/react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { CalendarDays, Check, Clock, Crown, Download, LucideIcon, MapPin, ScanLine, Star, Ticket as TicketIcon, User, Wallet, X } from 'lucide-react';
+import { CalendarDays, Check, Clock, Crown, Download, LucideIcon, MapPin, Receipt, ScanLine, Star, Ticket as TicketIcon, User, Wallet, X } from 'lucide-react';
 import { CSSProperties, ReactNode, useEffect, useState } from 'react';
 
 interface T {
@@ -228,8 +228,11 @@ export default function Tickets({ tickets }: PageProps<{ tickets: T[] }>) {
                             My <span className="font-display font-normal italic tracking-normal text-gradient">tickets</span>
                         </h1>
                     </div>
-                    <Link href="/my-account/orders" className="text-sm font-semibold text-slate-500 hover:text-ink">
-                        Orders
+                    <Link
+                        href="/my-account/orders"
+                        className="mb-1 inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full border border-tint/10 bg-tint/[0.04] px-4 text-sm font-semibold text-ink transition-colors hover:bg-tint/[0.08]"
+                    >
+                        <Receipt className="h-4 w-4 text-slate-500" /> Orders
                     </Link>
                 </div>
 
@@ -312,10 +315,8 @@ function StatusPill({ ticket, className }: { ticket: T; className?: string }) {
 function Wordmark({ tier, className }: { tier: TierTheme; className?: string }) {
     return (
         <span className={cn('inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-[0.22em]', className)}>
-            <span className="grid h-5 w-5 place-items-center rounded-md text-white" style={{ background: tier.bar }}>
-                <TicketIcon className={cn('h-3 w-3', tier.dark || tier === TIERS.vip ? 'text-[#08080D]' : 'text-white')} strokeWidth={2.6} />
-            </span>
-            TicketFlow
+            <img src="/brand/tuvio-mark.png" alt="" className="h-5 w-auto" />
+            TUVIO
         </span>
     );
 }

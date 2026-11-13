@@ -2,6 +2,8 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Event;
+use App\Models\Organization;
 use App\Support\CurrentOrganization;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -56,6 +58,11 @@ class HandleInertiaRequests extends Middleware
                 ]) : [],
                 'currentOrganization' => $currentOrg ? [
                     'id' => $currentOrg->id, 'name' => $currentOrg->name, 'slug' => $currentOrg->slug,
+                    'status' => $currentOrg->status,
+                    'plan' => ($plan = $currentOrg->currentPlan()) ? [
+                        'name' => $plan->name, 'slug' => $plan->slug, 'capabilities' => array_values($plan->capabilities ?? []),
+                        'team_member_limit' => $plan->team_member_limit,
+                    ] : null,
                 ] : null,
             ],
             'flash' => [
@@ -66,10 +73,15 @@ class HandleInertiaRequests extends Middleware
                 'name' => config('app.name'),
                 'currency' => config('ticketflow.default_currency'),
                 'demo_mode' => config('ticketflow.demo_mode'),
+                'tax' => ['bps' => (int) config('ticketflow.tax.bps'), 'label' => config('ticketflow.tax.label')],
             ],
             'notifications' => [
                 'unread' => fn () => $user ? $user->unreadNotifications()->count() : 0,
             ],
+            'admin' => fn () => $user?->isAdmin() ? [
+                'pending_approvals' => Organization::where('status', Organization::STATUS_PENDING)->count()
+                    + Event::where('status', 'in_review')->count(),
+            ] : null,
         ];
     }
 }

@@ -18,14 +18,12 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // Platform administrator.
-        User::updateOrCreate(
-            ['email' => 'admin@ticketflow.test'],
-            [
-                'name' => 'TicketFlow Admin',
-                'password' => Hash::make('password'),
-                'is_admin' => true,
-                'email_verified_at' => now(),
-            ],
-        );
+        $admin = User::firstOrNew(['email' => 'admin@ticketflow.test']);
+        $admin->forceFill([
+            'name' => 'TUVIO Admin',
+            'password' => Hash::make('password'),
+            'is_admin' => true,
+            'email_verified_at' => now(),
+        ])->save();
     }
 }

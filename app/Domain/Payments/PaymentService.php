@@ -5,12 +5,14 @@ namespace App\Domain\Payments;
 use App\Domain\Ledger\ChartOfAccounts;
 use App\Domain\Ledger\LedgerLine;
 use App\Domain\Ledger\LedgerService;
+use App\Domain\Subscriptions\SubscriptionService;
 use App\Domain\Tickets\TicketIssuer;
 use App\Models\Contribution;
 use App\Models\LedgerTransaction;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\PaymentWebhook;
+use App\Models\SubscriptionInvoice;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -21,9 +23,10 @@ class PaymentService
         private PaymentManager $manager,
         private LedgerService $ledger,
         private TicketIssuer $issuer,
+        private SubscriptionService $subscriptions,
     ) {}
 
-    public function initiateForOrder(Order $order, string $returnUrl, ?string $providerName = null): PaymentIntent
+    public function initiateForOrder(Order $order, string $returnUrl, ?string $providerName = null, ?string $method = null): PaymentIntent
     {
         if ($order->total_minor <= 0) {
             throw new RuntimeException('Free orders do not require payment.');
@@ -34,18 +37,37 @@ class PaymentService
             'order_id' => $order->id,
             'amount_minor' => $order->total_minor,
             'currency' => $order->currency,
+            'method' => $method,
             'existing' => $order->payments()->whereIn('status', ['initiated', 'pending'])->first(),
         ], $returnUrl, $providerName);
     }
 
-    public function initiateForContribution(Contribution $contribution, string $returnUrl, ?string $providerName = null): PaymentIntent
+    public function initiateForContribution(Contribution $contribution, string $returnUrl, ?string $providerName = null, ?string $method = null): PaymentIntent
     {
         return $this->initiate([
             'purpose' => 'contribution',
             'contribution_id' => $contribution->id,
             'amount_minor' => $contribution->amount_minor,
             'currency' => $contribution->currency,
+            'method' => $method,
             'existing' => Payment::where('contribution_id', $contribution->id)->whereIn('status', ['initiated', 'pending'])->first(),
+        ], $returnUrl, $providerName);
+    }
+
+    /** Pay a plan invoice: a Mobile Money PIN prompt to the invoice's payer phone, or the hosted card checkout. */
+    public function initiateForSubscriptionInvoice(SubscriptionInvoice $invoice, string $returnUrl, ?string $providerName = null, ?string $method = null): PaymentIntent
+    {
+        if ($invoice->status !== 'open') {
+            throw new RuntimeException('This invoice is not open for payment.');
+        }
+
+        return $this->initiate([
+            'purpose' => 'subscription',
+            'subscription_invoice_id' => $invoice->id,
+            'amount_minor' => $invoice->amount_minor,
+            'currency' => $invoice->currency,
+            'method' => $method,
+            'existing' => $invoice->payments()->whereIn('status', ['initiated', 'pending'])->first(),
         ], $returnUrl, $providerName);
     }
 
@@ -63,10 +85,24 @@ class PaymentService
             'idempotency_key' => (string) Str::uuid(),
             'amount_minor' => $spec['amount_minor'],
             'currency' => $spec['currency'],
+            'method' => $spec['method'] ?? null,
             'status' => 'initiated',
         ]);
 
-        $intent = $provider->initiate($payment, $returnUrl);
+        // The buyer may switch method (e.g. Mobile Money to card) when retrying.
+        if (isset($spec['method']) && $payment->method !== $spec['method']) {
+            $payment->update(['method' => $spec['method']]);
+        }
+
+        try {
+            $intent = $provider->initiate($payment, $returnUrl);
+        } catch (MobileMoneyPromptFailed $e) {
+            // The purchase exists at the provider; keep its ref so its outcome can still be read.
+            $payment->update(['provider_ref' => $e->providerRef, 'status' => 'pending']);
+
+            throw $e;
+        }
+
         $payment->update(['provider_ref' => $intent->providerRef, 'status' => 'pending']);
 
         return $intent;
@@ -84,15 +120,19 @@ class PaymentService
         $provider = $this->manager->provider($payment->provider);
         $result = $provider->verify($payment->provider_ref);
 
+        if (! $result->successful && $result->pending) {
+            return false;
+        }
+
         if (! $result->successful) {
             $payment->update(['status' => 'failed', 'failed_at' => now(), 'provider_payload' => $result->raw]);
 
             return false;
         }
 
-        if ($result->amountMinor > 0 && $result->amountMinor !== $payment->amount_minor) {
+        if ($result->amountMinor > 0 && ($result->amountMinor !== $payment->amount_minor || $result->currency !== $payment->currency)) {
             $payment->update(['status' => 'failed', 'failed_at' => now(), 'provider_payload' => $result->raw]);
-            throw new RuntimeException('Payment amount mismatch; refusing to fulfil.');
+            throw new RuntimeException('Payment amount or currency mismatch; refusing to fulfil.');
         }
 
         DB::transaction(function () use ($payment, $result) {
@@ -115,6 +155,7 @@ class PaymentService
         match ($payment->purpose) {
             'ticket_order' => $this->fulfillOrder($payment),
             'contribution' => $this->fulfillContribution($payment),
+            'subscription' => $this->fulfillSubscription($payment),
             default => null,
         };
     }
@@ -139,6 +180,7 @@ class PaymentService
             'processorFee' => $processorFee,
             'commission' => $order->commission_minor,
             'serviceFee' => $order->fee_minor,
+            'tax' => $order->tax_minor,
             'organizerNet' => $order->organizerNetMinor(),
         ], "Ticket sale {$order->reference}");
     }
@@ -173,6 +215,25 @@ class PaymentService
         ], "Contribution {$contribution->reference}");
     }
 
+    private function fulfillSubscription(Payment $payment): void
+    {
+        $invoice = SubscriptionInvoice::whereKey($payment->subscription_invoice_id)->firstOrFail();
+        $this->subscriptions->activate($invoice);
+
+        if ($this->alreadyPosted($invoice, 'subscription')) {
+            return;
+        }
+
+        $processorFee = $payment->processor_fee_minor ?? 0;
+        $lines = [LedgerLine::debit($this->ledger->account(ChartOfAccounts::PLATFORM_CASH, $invoice->currency), $invoice->amount_minor - $processorFee, "Subscription {$invoice->number}")];
+        if ($processorFee > 0) {
+            $lines[] = LedgerLine::debit($this->ledger->account(ChartOfAccounts::PROCESSOR_FEE_EXPENSE, $invoice->currency), $processorFee, 'Processor fee');
+        }
+        $lines[] = LedgerLine::credit($this->ledger->account(ChartOfAccounts::SUBSCRIPTION_INCOME, $invoice->currency), $invoice->amount_minor, 'Plan subscription');
+
+        $this->ledger->post('subscription', $lines, $invoice->currency, "Subscription {$invoice->number}", $invoice);
+    }
+
     /** Shared balanced posting for a collected sale/contribution. */
     private function postSale(string $type, $source, $organization, string $currency, array $amounts, string $desc): void
     {
@@ -187,6 +248,9 @@ class PaymentService
         }
         if ($amounts['serviceFee'] > 0) {
             $lines[] = LedgerLine::credit($this->ledger->account(ChartOfAccounts::SERVICE_FEE_INCOME, $currency), $amounts['serviceFee'], 'Service fee');
+        }
+        if (($amounts['tax'] ?? 0) > 0) {
+            $lines[] = LedgerLine::credit($this->ledger->account(ChartOfAccounts::TAX_PAYABLE, $currency), $amounts['tax'], 'Tax on platform fee');
         }
         if ($amounts['organizerNet'] > 0) {
             $lines[] = LedgerLine::credit($this->ledger->organizerPayable($organization, $currency), $amounts['organizerNet'], 'Organizer net');

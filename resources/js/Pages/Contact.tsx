@@ -1,54 +1,89 @@
 import { Button } from '@/Components/ui/Button';
-import { Field, Input } from '@/Components/ui/Input';
+import { Field, Input, Textarea } from '@/Components/ui/Input';
 import PublicLayout from '@/Layouts/PublicLayout';
+import { PageProps } from '@/types';
 import { Head, useForm } from '@inertiajs/react';
-import { Mail, MapPin, Phone } from 'lucide-react';
-import { FormEvent } from 'react';
+import { Clock, LifeBuoy, Mail, MapPin, Phone, Send } from 'lucide-react';
+import { FormEvent, ReactNode } from 'react';
 
-export default function Contact() {
-    const { data, setData, processing, reset } = useForm({ name: '', email: '', message: '' });
+const topics = ['I didn’t receive my tickets', 'Change or refund a ticket', 'Payment problem', 'Question about an event', 'Something else'];
+
+export default function Contact({ prefill }: PageProps<{ prefill: { name: string; email: string; order_reference: string } }>) {
+    const form = useForm({ ...prefill, subject: prefill.order_reference ? topics[0] : '', message: '' });
 
     function submit(e: FormEvent) {
         e.preventDefault();
-        // Wired to a support inbox in a later phase; validate client-side for now.
-        reset();
-        alert('Thanks! Our team will get back to you shortly.');
+        form.post('/support', {
+            preserveScroll: true,
+            onSuccess: () => form.reset('subject', 'message'),
+        });
     }
 
     return (
         <PublicLayout>
-            <Head title="Contact" />
-            <section className="container-page grid gap-10 py-16 lg:grid-cols-2">
+            <Head title="Contact & support" />
+            <section className="container-page grid gap-8 py-8 md:py-16 lg:grid-cols-[1fr_1.2fr] lg:gap-14">
                 <div>
-                    <h1 className="text-4xl font-extrabold tracking-tight text-ink">Get in touch</h1>
-                    <p className="mt-3 text-slate-500">
-                        Questions about events, payments or your account? We're here to help.
+                    <p className="inline-flex items-center gap-1.5 rounded-full bg-brand-500/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.14em] text-brand-300">
+                        <LifeBuoy className="h-3.5 w-3.5" /> Support
                     </p>
-                    <div className="mt-8 space-y-4">
-                        <ContactRow icon={<Mail className="h-5 w-5" />} label="Email" value="support@ticketflow.test" />
+                    <h1 className="mt-4 text-[2.2rem] font-extrabold leading-[1.05] tracking-[-0.045em] text-ink md:text-5xl">
+                        How can we <span className="font-display font-normal italic tracking-normal text-gradient">help?</span>
+                    </h1>
+                    <p className="mt-3 max-w-md text-slate-500">
+                        Add your order reference and your message goes straight to the event organizer. Everything else reaches the TUVIO team.
+                    </p>
+                    <div className="mt-8 space-y-3">
+                        <ContactRow icon={<Mail className="h-5 w-5" />} label="Email" value="support@tuvio.app" />
                         <ContactRow icon={<Phone className="h-5 w-5" />} label="Phone" value="+256 700 000 000" />
                         <ContactRow icon={<MapPin className="h-5 w-5" />} label="Office" value="Kampala, Uganda" />
+                        <ContactRow icon={<Clock className="h-5 w-5" />} label="Replies" value="Usually within a few hours" />
                     </div>
                 </div>
 
-                <form onSubmit={submit} className="space-y-4 rounded-2xl border border-slate-200 bg-card p-6">
-                    <Field label="Name">
-                        <Input value={data.name} onChange={(e) => setData('name', e.target.value)} required />
-                    </Field>
-                    <Field label="Email">
-                        <Input type="email" value={data.email} onChange={(e) => setData('email', e.target.value)} required />
-                    </Field>
-                    <Field label="Message">
-                        <textarea
-                            value={data.message}
-                            onChange={(e) => setData('message', e.target.value)}
-                            required
-                            rows={5}
-                            className="w-full rounded-xl border border-slate-300 bg-card px-3.5 py-2.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
+                <form onSubmit={submit} className="space-y-4 rounded-[1.75rem] border border-tint/[0.08] bg-card/80 p-5 shadow-premium sm:p-7">
+                    <div className="grid gap-4 sm:grid-cols-2">
+                        <Field label="Name" error={form.errors.name}>
+                            <Input value={form.data.name} onChange={(e) => form.setData('name', e.target.value)} autoComplete="name" required />
+                        </Field>
+                        <Field label="Email" error={form.errors.email}>
+                            <Input type="email" inputMode="email" value={form.data.email} onChange={(e) => form.setData('email', e.target.value)} autoComplete="email" required />
+                        </Field>
+                    </div>
+                    <Field label="Order reference (optional)" error={form.errors.order_reference}>
+                        <Input
+                            value={form.data.order_reference}
+                            onChange={(e) => form.setData('order_reference', e.target.value.toUpperCase())}
+                            placeholder="TF-AB12CD34"
+                            className="font-mono uppercase"
                         />
                     </Field>
-                    <Button type="submit" disabled={processing} className="w-full">
-                        Send message
+                    <div className="space-y-1.5">
+                        <span className="text-sm font-medium text-ink">What’s it about?</span>
+                        <div className="flex flex-wrap gap-2">
+                            {topics.map((t) => (
+                                <button
+                                    key={t}
+                                    type="button"
+                                    onClick={() => form.setData('subject', t)}
+                                    aria-pressed={form.data.subject === t}
+                                    className={
+                                        form.data.subject === t
+                                            ? 'rounded-full border border-brand-500 bg-brand-500 px-3.5 py-1.5 text-xs font-semibold text-white'
+                                            : 'rounded-full border border-tint/[0.1] bg-card px-3.5 py-1.5 text-xs font-semibold text-slate-600 hover:text-ink'
+                                    }
+                                >
+                                    {t}
+                                </button>
+                            ))}
+                        </div>
+                        {form.errors.subject && <span className="block text-sm text-danger">Choose a topic.</span>}
+                    </div>
+                    <Field label="Message" error={form.errors.message}>
+                        <Textarea value={form.data.message} onChange={(e) => form.setData('message', e.target.value)} rows={5} required placeholder="Tell us what happened…" />
+                    </Field>
+                    <Button type="submit" size="lg" disabled={form.processing || !form.data.subject} className="w-full">
+                        <Send className="h-4 w-4" /> Send message
                     </Button>
                 </form>
             </section>
@@ -56,13 +91,13 @@ export default function Contact() {
     );
 }
 
-function ContactRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+function ContactRow({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
     return (
-        <div className="flex items-center gap-3">
-            <span className="grid h-10 w-10 place-items-center rounded-xl bg-brand-50 text-brand-600">{icon}</span>
+        <div className="flex items-center gap-3 rounded-2xl border border-tint/[0.06] bg-card/60 p-3">
+            <span className="grid h-10 w-10 place-items-center rounded-full bg-brand-500/10 text-brand-300">{icon}</span>
             <div>
-                <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{label}</p>
-                <p className="font-medium text-ink">{value}</p>
+                <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">{label}</p>
+                <p className="font-semibold text-ink">{value}</p>
             </div>
         </div>
     );

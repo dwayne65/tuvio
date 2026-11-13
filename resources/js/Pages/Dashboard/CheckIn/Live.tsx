@@ -9,7 +9,7 @@ import { Head, usePoll } from '@inertiajs/react';
 import { Activity, CheckCircle2, Clock, DoorOpen, ScanLine, Settings2, Ticket, Users } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
-const BRAND = '#2f7dff';
+const BRAND = '#6418f5';
 const AXIS = '#7d849a';
 const GRID = 'rgba(127,135,160,0.16)';
 

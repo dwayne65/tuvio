@@ -4,7 +4,7 @@ import { Field, Input } from '@/Components/ui/Input';
 import PublicLayout from '@/Layouts/PublicLayout';
 import { money } from '@/lib/utils';
 import { PageProps } from '@/types';
-import { Head, useForm, usePage } from '@inertiajs/react';
+import { Head, useForm } from '@inertiajs/react';
 import { Heart } from 'lucide-react';
 import { FormEvent } from 'react';
 
@@ -15,7 +15,6 @@ interface Campaign {
 }
 
 export default function CampaignShow({ campaign }: PageProps<{ campaign: Campaign }>) {
-    const { flash } = usePage<PageProps>().props;
     const { data, setData, post, processing, errors } = useForm({ amount_major: '', name: '', email: '', message: '', is_anonymous: false });
 
     function contribute(e: FormEvent) {
@@ -27,7 +26,6 @@ export default function CampaignShow({ campaign }: PageProps<{ campaign: Campaig
         <PublicLayout>
             <Head title={campaign.title} />
             <div className="container-page max-w-5xl py-12">
-                {flash.error && <div className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{flash.error}</div>}
                 <div className="grid gap-8 lg:grid-cols-3">
                     <div className="lg:col-span-2">
                         <div className="aspect-[16/9] overflow-hidden rounded-2xl bg-gradient-to-br from-brand-400 to-brand-700">

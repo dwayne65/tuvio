@@ -22,9 +22,17 @@ class Organization extends Model
     {
         return [
             'verified_at' => 'datetime',
+            'approved_at' => 'datetime',
             'commission_bps' => 'integer',
         ];
     }
+
+    /** Statuses: pending (awaiting admin approval), active, rejected, suspended. */
+    public const STATUS_PENDING = 'pending';
+
+    public const STATUS_ACTIVE = 'active';
+
+    public const STATUS_REJECTED = 'rejected';
 
     public function owner(): BelongsTo
     {
@@ -61,12 +69,60 @@ class Organization extends Model
         return $this->hasMany(Payout::class);
     }
 
+    public function promoCodes(): HasMany
+    {
+        return $this->hasMany(PromoCode::class);
+    }
+
+    public function promoters(): HasMany
+    {
+        return $this->hasMany(Promoter::class);
+    }
+
+    public function supportTickets(): HasMany
+    {
+        return $this->hasMany(SupportTicket::class);
+    }
+
+    /** The paid-up subscription whose period is still running, if any. */
     public function activeSubscription(): ?Subscription
     {
         return $this->subscription()
             ->whereIn('status', ['trialing', 'active'])
+            ->where(fn ($query) => $query->whereNull('current_period_end')->orWhere('current_period_end', '>', now()))
             ->latest('current_period_end')
             ->first();
+    }
+
+    /**
+     * The plan whose limits, features and commission apply right now: the active
+     * subscription's plan, otherwise the free plan. Null only if no free plan exists.
+     */
+    public function currentPlan(): ?SubscriptionPlan
+    {
+        return $this->activeSubscription()?->plan ?? SubscriptionPlan::free();
+    }
+
+    /** Platform commission on ticket sales: an admin-negotiated rate, then the plan's, then the default. */
+    public function commissionBps(): int
+    {
+        return (int) ($this->commission_bps ?? $this->currentPlan()?->commission_bps ?? config('ticketflow.commission_bps'));
+    }
+
+    public function planAllows(string $capability): bool
+    {
+        return $this->currentPlan()?->allows($capability) ?? false;
+    }
+
+    /** Only an organization approved by a platform admin may use the organizer dashboard. */
+    public function isApproved(): bool
+    {
+        return $this->status === self::STATUS_ACTIVE;
+    }
+
+    public function isAwaitingApproval(): bool
+    {
+        return $this->status === self::STATUS_PENDING;
     }
 
     public function hasActiveSubscription(): bool

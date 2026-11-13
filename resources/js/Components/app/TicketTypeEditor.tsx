@@ -145,7 +145,7 @@ export function TicketTypeEditor({ value: d, onChange, currency, errors = {}, er
                                 onClick={() => chooseTier(t.key)}
                                 className={cn(
                                     'group relative overflow-hidden rounded-2xl border bg-card text-left transition-all',
-                                    active ? 'border-transparent ring-2 ring-brand-500 shadow-[0_12px_28px_-16px_rgb(47_125_255_/_0.6)]' : 'border-tint/10 hover:-translate-y-0.5 hover:border-tint/20',
+                                    active ? 'border-transparent ring-2 ring-brand-500 shadow-[0_12px_28px_-16px_rgb(100_24_245_/_0.6)]' : 'border-tint/10 hover:-translate-y-0.5 hover:border-tint/20',
                                 )}
                             >
                                 <span className="relative flex h-14 items-center px-3.5" style={{ background: t.swatch }}>

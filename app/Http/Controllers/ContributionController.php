@@ -11,6 +11,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 class ContributionController extends Controller
 {
@@ -39,7 +40,7 @@ class ContributionController extends Controller
         ]);
     }
 
-    public function contribute(Request $request, Campaign $campaign): RedirectResponse
+    public function contribute(Request $request, Campaign $campaign): SymfonyResponse
     {
         $data = $request->validate([
             'amount_major' => ['required', 'numeric', 'min:1'],

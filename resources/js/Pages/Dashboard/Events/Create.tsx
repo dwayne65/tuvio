@@ -1,5 +1,6 @@
 import { Button } from '@/Components/ui/Button';
 import { Accent } from '@/Components/app/Kit';
+import FeePayerChoice from '@/Components/app/FeePayerChoice';
 import { TicketPreview, TicketTypeDraft, TicketTypeEditor, draftPayload, newDraft } from '@/Components/app/TicketTypeEditor';
 import { Field, Input, Select, Textarea } from '@/Components/ui/Input';
 import AppLayout from '@/Layouts/AppLayout';
@@ -14,13 +15,14 @@ interface Cat { id: number; name: string; slug: string }
 
 const steps = ['Basics', 'Date & location', 'Tickets', 'Review'];
 
-export default function CreateEvent({ categories, currency }: PageProps<{ categories: Cat[]; currency: string }>) {
+export default function CreateEvent({ categories, currency, commission_bps }: PageProps<{ categories: Cat[]; currency: string; commission_bps: number }>) {
     const [step, setStep] = useState(0);
     const { data, setData, post, transform, processing, errors } = useForm<any>({
         title: '', description: '', event_category_id: '', type: 'physical', visibility: 'public',
         start_at: '', end_at: '', timezone: 'Africa/Kampala',
         venue_name: '', venue_address: '', city: '', online_url: '', currency,
         refund_policy: '',
+        fee_payer: 'organizer',
         cover: null as File | null,
         ticket_types: [newDraft('general')] as TicketTypeDraft[],
     });
@@ -225,6 +227,10 @@ export default function CreateEvent({ categories, currency }: PageProps<{ catego
                                         })}
                                     </div>
                                 </div>
+
+                                <div className="pt-2">
+                                    <FeePayerChoice value={data.fee_payer} onChange={(v) => setData('fee_payer', v)} commissionBps={commission_bps} currency={currency} />
+                                </div>
                             </div>
                         )}
 
@@ -235,6 +241,7 @@ export default function CreateEvent({ categories, currency }: PageProps<{ catego
                                 <Row label="Type" value={data.type} />
                                 <Row label="Location" value={data.type === 'online' ? 'Online' : [data.venue_name, data.city].filter(Boolean).join(', ')} />
                                 <Row label="Tickets" value={data.ticket_types.map((t: TicketTypeDraft) => t.name.trim() || 'Untitled').join(' · ')} />
+                                <Row label="Tuvio fee" value={data.fee_payer === 'buyer' ? 'Paid by buyers at checkout' : 'Paid by you from earnings'} />
                                 <p className="pt-2 text-slate-500">Your event will be created as a <strong>draft</strong>. You can review and publish it next.</p>
                             </div>
                         )}

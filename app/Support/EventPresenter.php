@@ -3,6 +3,8 @@
 namespace App\Support;
 
 use App\Models\Event;
+use App\Models\TicketType;
+use Illuminate\Support\Collection;
 
 /** Transforms an Event into the shape the React front-end expects (EventSummary). */
 class EventPresenter
@@ -42,6 +44,34 @@ class EventPresenter
             ] : null,
             'is_free' => $isFree,
             'is_featured' => (bool) $event->is_featured,
+            'availability' => self::availability($onSale),
         ];
+    }
+
+    /**
+     * How easy it is to still get a ticket, across visible ticket types.
+     * "selling_fast" means a fifth or less of the on-sale capacity is left.
+     *
+     * @param  Collection<int, TicketType>  $visible
+     * @return 'on_sale'|'selling_fast'|'sold_out'|'not_on_sale'
+     */
+    private static function availability(Collection $visible): string
+    {
+        $onSale = $visible->filter(fn (TicketType $type) => $type->isOnSale());
+
+        if ($onSale->isEmpty()) {
+            $allGone = $visible->isNotEmpty() && $visible->every(fn (TicketType $type) => $type->availableQuantity() === 0);
+
+            return $allGone ? 'sold_out' : 'not_on_sale';
+        }
+
+        if ($onSale->contains(fn (TicketType $type) => $type->availableQuantity() === null)) {
+            return 'on_sale';
+        }
+
+        $remaining = $onSale->sum(fn (TicketType $type) => $type->availableQuantity());
+        $capacity = $onSale->sum('quantity_total');
+
+        return $remaining * 5 <= $capacity ? 'selling_fast' : 'on_sale';
     }
 }

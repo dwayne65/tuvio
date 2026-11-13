@@ -121,7 +121,7 @@ export default function CheckInSetup({
 
                 <Panel title="Gate staff" subtitle="Give volunteers or hired staff scanner access to this event only.">
                     <form onSubmit={addStaff} className="space-y-3">
-                        <Field label="Email of their TicketFlow account" error={staffForm.errors.email}>
+                        <Field label="Email of their TUVIO account" error={staffForm.errors.email}>
                             <Input
                                 type="email"
                                 value={staffForm.data.email}

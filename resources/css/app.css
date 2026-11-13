@@ -3,7 +3,7 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /*
- | TicketFlow design system: "Daylight" (default) and "Midnight" (.dark).
+ | TUVIO design system: "Daylight" (default) and "Midnight" (.dark).
  | The .dark class is toggled by the visitor's local time (see lib/theme.ts),
  | so every token below is redefined for night under `.dark`.
  | `tint` is the foreground used for translucent lines/surfaces
@@ -14,17 +14,17 @@
     --font-display: 'Instrument Serif', ui-serif, Georgia, serif;
 
     /* Brand (electric blue) */
-    --color-brand-50: #eef4ff;
-    --color-brand-100: #dce8ff;
-    --color-brand-200: #b8d2ff;
-    --color-brand-300: #2a6df0;
-    --color-brand-400: #4b8eff;
-    --color-brand-500: #2f7dff;
-    --color-brand-600: #1f63e0;
-    --color-brand-700: #1a52c0;
-    --color-brand-800: #1a4cb0;
-    --color-brand-900: #123a82;
-    --color-brand-950: #0b2150;
+    --color-brand-50: #f4efff;
+    --color-brand-100: #e9deff;
+    --color-brand-200: #d3bfff;
+    --color-brand-300: #5b1ce6;
+    --color-brand-400: #8b5cff;
+    --color-brand-500: #6418f5;
+    --color-brand-600: #5310d6;
+    --color-brand-700: #450cb8;
+    --color-brand-800: #3a0c95;
+    --color-brand-900: #2c0a6e;
+    --color-brand-950: #1a0545;
 
     --color-slate-50: #f8fafc;
     --color-slate-100: #f1f5f9;
@@ -69,19 +69,19 @@
 :root {
     --shadow-premium: 0 1px 2px rgb(13 16 32 / 0.05), 0 30px 60px -30px rgb(30 50 110 / 0.35);
     --glass-bg: rgb(255 255 255 / 0.72);
-    --glow-a: rgb(47 125 255 / 0.12);
-    --glow-b: rgb(47 125 255 / 0.06);
+    --glow-a: rgb(100 24 245 / 0.12);
+    --glow-b: rgb(100 24 245 / 0.06);
 }
 
 /* Night palette */
 .dark {
-    --color-brand-50: #0f1b36;
-    --color-brand-100: #13244a;
-    --color-brand-200: #b8d2ff;
-    --color-brand-300: #8db8ff;
-    --color-brand-400: #5f9cff;
-    --color-brand-600: #4b8eff;
-    --color-brand-700: #2565e0;
+    --color-brand-50: #170f33;
+    --color-brand-100: #221448;
+    --color-brand-200: #d3bfff;
+    --color-brand-300: #b9a0ff;
+    --color-brand-400: #9b74ff;
+    --color-brand-600: #8b5cff;
+    --color-brand-700: #5a14e0;
 
     --color-slate-50: #111319;
     --color-slate-100: #171a22;
@@ -118,8 +118,8 @@
     --shadow-card: inset 0 1px 0 rgb(255 255 255 / 0.04), 0 24px 48px -28px rgb(0 0 0 / 0.9);
     --shadow-premium: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 30px 70px -30px rgb(0 0 0 / 0.95);
     --glass-bg: rgb(20 22 30 / 0.62);
-    --glow-a: rgb(47 125 255 / 0.14);
-    --glow-b: rgb(47 125 255 / 0.07);
+    --glow-a: rgb(124 70 255 / 0.16);
+    --glow-b: rgb(124 70 255 / 0.08);
 }
 
 @layer base {
@@ -152,7 +152,7 @@
         border-color: color-mix(in srgb, var(--color-tint) 8%, transparent);
     }
     ::selection {
-        background: rgb(47 125 255 / 0.45);
+        background: rgb(100 24 245 / 0.45);
         color: white;
     }
     select option {
@@ -175,13 +175,13 @@
     }
 
     .text-gradient {
-        background: linear-gradient(100deg, #2f7dff, #5f9cff 55%, #2565e0);
+        background: linear-gradient(100deg, #6418f5, #9b6bff 55%, #4a0cc8);
         -webkit-background-clip: text;
         background-clip: text;
         color: transparent;
     }
     .dark .text-gradient {
-        background-image: linear-gradient(100deg, #b8d2ff, #5f9cff 45%, #2f7dff);
+        background-image: linear-gradient(100deg, #e2d4ff, #a47dff 45%, #7c3cff);
     }
 
     .elevate {
@@ -193,7 +193,7 @@
     }
 
     .glow-blue {
-        box-shadow: 0 12px 34px -12px rgb(47 125 255 / 0.85);
+        box-shadow: 0 12px 34px -12px rgb(100 24 245 / 0.75);
     }
 
     .surface-panel {
@@ -277,6 +277,82 @@
     50% { transform: rotate(10deg); }
 }
 
+/* Homepage concert poster (the no-WebGL / phone version of the 3D stage) */
+@keyframes poster-beam {
+    0%, 100% { transform: translateX(-50%) rotate(-24deg); }
+    50% { transform: translateX(-50%) rotate(24deg); }
+}
+.poster-beam {
+    clip-path: polygon(46% 0, 54% 0, 100% 100%, 0 100%);
+    filter: blur(6px);
+    mix-blend-mode: screen;
+    animation: poster-beam 9s ease-in-out infinite;
+}
+@keyframes poster-twinkle {
+    0%, 100% { opacity: 0.25; }
+    50% { opacity: 1; }
+}
+.poster-twinkle { animation: poster-twinkle 2.4s ease-in-out infinite; }
+
+/* Floating admission passes; --r keeps each pass's own tilt while it floats */
+@keyframes float-pass {
+    0%, 100% { transform: translateY(0) rotate(var(--r, 0deg)); }
+    50% { transform: translateY(-14px) rotate(var(--r, 0deg)); }
+}
+.float-pass { animation: float-pass 7s ease-in-out infinite; }
+
 @media (prefers-reduced-motion: reduce) {
-    .aurora, .aurora-slow, .float-y { animation: none; }
+    .aurora, .aurora-slow, .float-y, .poster-twinkle, .float-pass { animation: none; }
+    .poster-beam { animation: none; transform: translateX(-50%); }
+}
+
+/* Long-form policy text (Terms, Privacy) */
+@layer components {
+    .legal-prose ul {
+        list-style: none;
+        display: grid;
+        gap: 0.6rem;
+    }
+    .legal-prose li {
+        position: relative;
+        padding-left: 1.4rem;
+    }
+    .legal-prose li::before {
+        content: '';
+        position: absolute;
+        left: 0.15rem;
+        top: 0.68rem;
+        height: 0.45rem;
+        width: 0.45rem;
+        border-radius: 9999px;
+        background: var(--color-brand-500);
+    }
+    .legal-prose strong {
+        color: var(--color-ink);
+        font-weight: 700;
+    }
+    .legal-prose a {
+        color: var(--color-brand-300);
+        font-weight: 600;
+        text-decoration: underline;
+        text-underline-offset: 3px;
+        text-decoration-thickness: 1px;
+    }
+}
+
+/* Native app: on iPhone the page runs under the status bar, so sticky headers grow to clear it (the inset is 0 on Android and the web). */
+.is-native-app header.sticky {
+    padding-top: env(safe-area-inset-top);
+}
+.is-native-app header.sticky.h-16 {
+    height: calc(4rem + env(safe-area-inset-top));
+}
+
+/* iOS Safari zooms into any field under 16px when it is focused and never zooms back out, which leaves the page cropped. Touch screens get 16px fields; desktop keeps the design sizes. Unlayered so it wins over the text-size utilities. */
+@media (pointer: coarse) {
+    input:not([type='checkbox'], [type='radio'], [type='range'], [type='file']),
+    select,
+    textarea {
+        font-size: max(16px, 1em);
+    }
 }

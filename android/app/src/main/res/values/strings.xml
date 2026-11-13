@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">TUVIO</string>
+    <string name="title_activity_main">TUVIO</string>
+    <string name="package_name">com.tuvio.app</string>
+    <string name="custom_url_scheme">com.tuvio.app</string>
+</resources>

@@ -4,9 +4,9 @@ import AuthLayout from '@/Layouts/AuthLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { FormEvent } from 'react';
 
-export default function Login({ canResetPassword, status }: { canResetPassword: boolean; status?: string }) {
+export default function Login({ canResetPassword, status, email = '' }: { canResetPassword: boolean; status?: string; email?: string }) {
     const { data, setData, post, processing, errors, reset } = useForm({
-        email: '',
+        email,
         password: '',
         remember: false,
     });
@@ -17,7 +17,7 @@ export default function Login({ canResetPassword, status }: { canResetPassword: 
     }
 
     return (
-        <AuthLayout title="Welcome back" subtitle="Sign in to your TicketFlow account">
+        <AuthLayout title="Welcome back" subtitle="Sign in to your TUVIO account">
             <Head title="Login" />
             {status && <div className="mb-4 rounded-lg bg-emerald-50 px-4 py-2 text-sm text-emerald-700">{status}</div>}
 
@@ -52,7 +52,7 @@ export default function Login({ canResetPassword, status }: { canResetPassword: 
             </form>
 
             <p className="mt-6 text-center text-sm text-slate-500">
-                New to TicketFlow?{' '}
+                New to TUVIO?{' '}
                 <Link href="/register" className="font-semibold text-brand-600 hover:text-brand-300">
                     Create an account
                 </Link>

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\OrganizationRole;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -16,9 +17,10 @@ class User extends Authenticatable implements MustVerifyEmail
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
+    /** is_admin and the two_factor_* columns are deliberately not mass assignable. */
     protected $fillable = [
         'name', 'email', 'password', 'phone', 'avatar_path',
-        'locale', 'country', 'timezone', 'is_admin',
+        'locale', 'country', 'timezone',
     ];
 
     protected $hidden = [
@@ -72,11 +74,12 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(Contribution::class);
     }
 
-    /** Every organization the user belongs to (owner or member). */
+    /** Every organization the user belongs to (owner or member). Pending invites are excluded. */
     public function organizations(): BelongsToMany
     {
         return $this->belongsToMany(Organization::class, 'organization_members')
             ->withPivot('role', 'accepted_at')
+            ->wherePivotNotNull('accepted_at')
             ->withTimestamps();
     }
 
@@ -85,11 +88,39 @@ class User extends Authenticatable implements MustVerifyEmail
         return (bool) $this->is_admin;
     }
 
-    /** The user's role within a given organization, or null if not a member. */
-    public function roleIn(Organization $organization): ?string
+    /** Two-factor authentication counts only once the user has confirmed a code from their app. */
+    public function hasTwoFactorEnabled(): bool
+    {
+        return $this->two_factor_secret !== null && $this->two_factor_confirmed_at !== null;
+    }
+
+    /**
+     * Whether signing in needs a one-time code sent to the user's email: always for
+     * platform admins, and for members of an organization on a plan that requires it
+     * (Professional and Enterprise by default).
+     */
+    public function requiresEmailLoginCode(): bool
+    {
+        if (! config('ticketflow.email_login_codes.enabled')) {
+            return false;
+        }
+
+        if ($this->isAdmin()) {
+            return true;
+        }
+
+        $plans = config('ticketflow.email_login_codes.plans', []);
+
+        return $this->organizations()->get()
+            ->contains(fn (Organization $organization): bool => in_array($organization->currentPlan()?->slug, $plans, true));
+    }
+
+    /** The user's role within a given organization, or null if not a member (a pending invite is not membership). */
+    public function roleIn(Organization $organization): ?OrganizationRole
     {
         return $this->memberships
-            ->firstWhere('organization_id', $organization->id)?->role;
+            ->first(fn (OrganizationMember $member): bool => $member->organization_id === $organization->id && $member->isAccepted())
+            ?->role;
     }
 
     public function belongsToOrganization(Organization $organization): bool
@@ -100,11 +131,11 @@ class User extends Authenticatable implements MustVerifyEmail
     /** Owner/admin can manage org settings, events, finances. */
     public function canManageOrganization(Organization $organization): bool
     {
-        return in_array($this->roleIn($organization), ['owner', 'admin'], true);
+        return $this->roleIn($organization)?->canManageOrganization() ?? false;
     }
 
     public function isOrganizer(): bool
     {
-        return $this->memberships()->exists() || $this->ownedOrganizations()->exists();
+        return $this->memberships()->accepted()->exists() || $this->ownedOrganizations()->exists();
     }
 }

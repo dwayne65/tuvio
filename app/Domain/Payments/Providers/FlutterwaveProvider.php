@@ -33,7 +33,7 @@ class FlutterwaveProvider implements PaymentProvider
                 'redirect_url' => $returnUrl,
                 'payment_options' => 'mobilemoneyuganda,card',
                 'customer' => [
-                    'email' => $payment->order?->buyer_email ?? 'customer@ticketflow.test',
+                    'email' => $payment->order?->buyer_email ?? 'customer@tuvio.app',
                     'name' => $payment->order?->buyer_name ?? 'Customer',
                 ],
                 'meta' => ['payment_id' => $payment->id],

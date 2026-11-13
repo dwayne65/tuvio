@@ -24,9 +24,10 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-    <title inertia>{{ config('app.name', 'TicketFlow') }}</title>
+    <title inertia>{{ config('app.name', 'TUVIO') }}</title>
 
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="icon" href="/brand/favicon-64.png" type="image/png">
+    <link rel="apple-touch-icon" href="/brand/apple-touch-icon.png">
     <link rel="manifest" href="/manifest.webmanifest">
 
     @routes

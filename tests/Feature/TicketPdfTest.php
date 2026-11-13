@@ -75,6 +75,22 @@ class TicketPdfTest extends TestCase
         });
     }
 
+    public function test_ticket_email_shows_event_tickets_and_receipt(): void
+    {
+        $ticket = $this->issuedTicketFor(User::factory()->create());
+        $order = $ticket->order;
+
+        $mail = new TicketsIssuedMail($order->fresh(['event', 'tickets.ticketType']));
+
+        $mail->assertHasSubject("You're going! Your tickets for {$order->event->title}");
+        $mail->assertSeeInHtml($order->event->title);
+        $mail->assertSeeInHtml($ticket->code);
+        $mail->assertSeeInHtml($order->reference);
+        $mail->assertSeeInHtml('calendar.google.com', false);
+        $mail->assertSeeInHtml('data:image/png;base64,', false);
+        $mail->assertSeeInText($ticket->code);
+    }
+
     public function test_guest_can_download_ticket_with_signed_link(): void
     {
         $ticket = $this->issuedTicketFor(User::factory()->create());
@@ -97,6 +113,7 @@ class TicketPdfTest extends TestCase
     {
         $user = User::factory()->create();
         $this->actingAs($user)->post('/organizations', ['name' => 'Acme Events']);
+        Organization::where('status', Organization::STATUS_PENDING)->update(['status' => Organization::STATUS_ACTIVE]);
 
         return [$user, $user->organizations()->firstOrFail()];
     }

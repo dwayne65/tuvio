@@ -1,4 +1,5 @@
 import { PageTitle } from '@/Components/app/PageTitle';
+import AdminLayout from '@/Layouts/AdminLayout';
 import { Toaster } from '@/Components/app/Toaster';
 import { Logo } from '@/Components/Logo';
 import { cn } from '@/lib/utils';
@@ -6,12 +7,16 @@ import { PageProps } from '@/types';
 import { Link, router, usePage } from '@inertiajs/react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-    BarChart3, Bell, CalendarDays, CreditCard, Gift, Home, LayoutDashboard, LogOut, LucideIcon, Menu, QrCode,
-    Settings, Sparkles, Ticket, Users, Wallet, X,
+    BarChart3, Bell, CalendarDays, CreditCard, FileBarChart, Gift, Home, LayoutDashboard, LifeBuoy, LogOut, LucideIcon,
+    Megaphone, Menu, QrCode, Settings, Sparkles, Star, Tag, Ticket, UserCog, Users, Wallet, X,
 } from 'lucide-react';
 import { ReactNode, useState } from 'react';
 
-const navItems = [
+/**
+ * Items with a capability belong to a paid plan and only show when the organization's plan
+ * includes it (the server enforces it too). "teamSeats" items need a plan with more than one seat.
+ */
+const navItems: { label: string; href: string; icon: LucideIcon; capability?: string; teamSeats?: boolean }[] = [
     { label: 'Overview', href: '/dashboard', icon: LayoutDashboard },
     { label: 'My Events', href: '/dashboard/events', icon: CalendarDays },
     { label: 'Tickets', href: '/dashboard/tickets', icon: Ticket },
@@ -20,7 +25,13 @@ const navItems = [
     { label: 'Contributions', href: '/dashboard/contributions', icon: Gift },
     { label: 'Transactions', href: '/dashboard/transactions', icon: CreditCard },
     { label: 'Payouts', href: '/dashboard/payouts', icon: Wallet },
-    { label: 'Analytics', href: '/dashboard/analytics', icon: BarChart3 },
+    { label: 'Analytics', href: '/dashboard/analytics', icon: BarChart3, capability: 'advanced_analytics' },
+    { label: 'Reports', href: '/dashboard/reports', icon: FileBarChart, capability: 'reports' },
+    { label: 'Discounts', href: '/dashboard/discounts', icon: Tag, capability: 'promo_codes' },
+    { label: 'Promoters', href: '/dashboard/promoters', icon: Megaphone, capability: 'promoters' },
+    { label: 'Reviews', href: '/dashboard/reviews', icon: Star },
+    { label: 'Support', href: '/dashboard/support', icon: LifeBuoy },
+    { label: 'Team', href: '/dashboard/team', icon: UserCog, teamSeats: true },
     { label: 'Subscription', href: '/dashboard/subscription', icon: CreditCard },
     { label: 'Settings', href: '/settings/profile', icon: Settings },
 ];
@@ -45,7 +56,21 @@ export default function AppLayout({
     const page = usePage<PageProps>();
     const { auth, notifications } = page.props;
     const current = page.url.split('?')[0];
+    const plan = auth.currentOrganization?.plan ?? null;
+    const planCapabilities = plan?.capabilities ?? [];
     const [open, setOpen] = useState(false);
+    const visibleItems = navItems.filter(
+        (item) => (!item.capability || planCapabilities.includes(item.capability)) && (!item.teamSeats || plan?.team_member_limit !== 1),
+    );
+
+    // Platform admins work from the admin workspace, including shared pages such as notifications and settings.
+    if (auth.user?.is_admin) {
+        return (
+            <AdminLayout title={title} subtitle={subtitle} actions={actions}>
+                {children}
+            </AdminLayout>
+        );
+    }
 
     return (
         <div className="min-h-screen">
@@ -59,7 +84,7 @@ export default function AppLayout({
                 <div className="absolute -right-20 -top-24 h-64 w-64 rounded-full bg-brand-500/15 blur-3xl" />
                 <div className="relative flex h-[4.5rem] items-center justify-between px-5">
                     <Link href="/dashboard">
-                        <Logo />
+                        <Logo className="h-8" />
                     </Link>
                     <button className="grid h-9 w-9 place-items-center rounded-full bg-tint/[0.06] lg:hidden" onClick={() => setOpen(false)} aria-label="Close menu">
                         <X className="h-4 w-4" />
@@ -68,7 +93,7 @@ export default function AppLayout({
                 <div className="relative flex-1 overflow-y-auto p-3">
                     <p className="mb-3 px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Workspace</p>
                     <nav className="flex flex-col gap-0.5">
-                        {navItems.map((item) => {
+                        {visibleItems.map((item) => {
                             const active = isActive(current, item.href);
                             return (
                                 <Link
@@ -116,12 +141,18 @@ export default function AppLayout({
                 <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-tint/[0.06] bg-canvas/75 px-4 backdrop-blur-2xl sm:px-6 lg:h-[4.5rem] lg:px-8">
                     <div className="flex min-w-0 items-center gap-3">
                         <Link href="/dashboard" className="lg:hidden" aria-label="Dashboard">
-                            <Logo className="[&>span:last-child]:hidden sm:[&>span:last-child]:inline" />
+                            <Logo variant="mark" className="h-8 sm:hidden" />
+                            <Logo className="hidden h-8 sm:inline-block" />
                         </Link>
                         {auth.currentOrganization && (
                             <div className="flex min-w-0 items-center gap-2 rounded-full border border-tint/[0.08] bg-tint/[0.03] px-3 py-1.5">
                                 <Sparkles className="h-3.5 w-3.5 shrink-0 text-brand-300" />
                                 <span className="truncate text-sm font-semibold text-ink">{auth.currentOrganization.name}</span>
+                                {plan && (
+                                    <Link href="/dashboard/subscription" className="shrink-0 rounded-full bg-brand-500/15 px-2 py-0.5 text-[11px] font-bold text-brand-300 hover:bg-brand-500/25">
+                                        {plan.name}
+                                    </Link>
+                                )}
                             </div>
                         )}
                     </div>

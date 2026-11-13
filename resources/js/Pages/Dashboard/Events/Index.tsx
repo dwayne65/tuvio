@@ -24,12 +24,14 @@ type Props = {
     canPublish: boolean;
 };
 
-const tone: Record<string, 'success' | 'warning' | 'neutral' | 'danger'> = {
+const tone: Record<string, 'success' | 'warning' | 'neutral' | 'danger' | 'brand'> = {
     published: 'success',
     draft: 'neutral',
     unpublished: 'warning',
     cancelled: 'danger',
     completed: 'neutral',
+    in_review: 'brand',
+    rejected: 'danger',
 };
 
 function duplicate(e: Ev) {
@@ -82,7 +84,7 @@ export default function EventsIndex({ events, canPublish }: PageProps<Props>) {
                                 </Link>
                             ),
                         },
-                        { header: 'Status', cell: (e) => <Badge tone={tone[e.status] ?? 'neutral'}>{e.status}</Badge> },
+                        { header: 'Status', cell: (e) => <Badge tone={tone[e.status] ?? 'neutral'}>{e.status.replace('_', ' ')}</Badge> },
                         { header: 'Date', cell: (e) => <span className="whitespace-nowrap text-slate-500">{e.start_at ? formatDate(e.start_at) : '—'}</span> },
                         { header: 'Sales', cell: (e) => <span className="text-slate-500">{e.tickets_count} sold · {e.ticket_types_count} types</span> },
                         {
@@ -105,7 +107,7 @@ export default function EventsIndex({ events, canPublish }: PageProps<Props>) {
                                         <CalendarDays className="h-3.5 w-3.5" /> {e.start_at ? formatDate(e.start_at, { weekday: 'short' }) : 'No date set'}
                                     </p>
                                 </Link>
-                                <Badge tone={tone[e.status] ?? 'neutral'}>{e.status}</Badge>
+                                <Badge tone={tone[e.status] ?? 'neutral'}>{e.status.replace('_', ' ')}</Badge>
                             </div>
                             <div className="mt-3 flex items-center justify-between gap-2 border-t border-tint/[0.06] pt-3">
                                 <span className="flex items-center gap-1.5 text-sm text-slate-500">

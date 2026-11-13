@@ -87,7 +87,7 @@ class CheckInSetupController extends Controller
 
         $user = User::whereRaw('lower(email) = ?', [strtolower($data['email'])])->first();
         if (! $user) {
-            return back()->withErrors(['email' => 'No TicketFlow account uses this email. Ask them to sign up (it’s free), then add them again.']);
+            return back()->withErrors(['email' => 'No TUVIO account uses this email. Ask them to sign up (it’s free), then add them again.']);
         }
         if ($user->belongsToOrganization($event->organization)) {
             return back()->withErrors(['email' => 'This person is already on your team and can scan every event.']);

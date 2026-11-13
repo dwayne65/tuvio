@@ -24,6 +24,8 @@ final class ChartOfAccounts
 
     public const REFUNDS_CLEARING = 'REFUNDS_CLEARING';     // contra/expense (debit)
 
+    public const OWNER_WITHDRAWALS = 'OWNER_WITHDRAWALS';   // equity (debit): earnings the platform owner has taken out
+
     // Per-organizer subsidiary account (money the platform owes organizers)
     public const ORGANIZER_PAYABLE = 'ORGANIZER_PAYABLE';   // liability (credit)
 
@@ -38,6 +40,7 @@ final class ChartOfAccounts
             self::PROCESSOR_FEE_EXPENSE => ['Payment Processor Fees', 'expense', 'debit'],
             self::TAX_PAYABLE => ['Tax Payable', 'liability', 'credit'],
             self::REFUNDS_CLEARING => ['Refunds Clearing', 'expense', 'debit'],
+            self::OWNER_WITHDRAWALS => ['Owner Withdrawals', 'equity', 'debit'],
         ];
     }
 }

@@ -15,7 +15,7 @@ export default function AdminUsers({ users, filters }: PageProps<{ users: { data
     const [q, setQ] = useState(filters.q ?? '');
 
     return (
-        <AdminLayout title={<>Us<Accent>ers</Accent></>} subtitle="Everyone with a TicketFlow account.">
+        <AdminLayout title={<>Us<Accent>ers</Accent></>} subtitle="Everyone with a TUVIO account.">
             <Head title="Admin · Users" />
             <form
                 onSubmit={(e) => {

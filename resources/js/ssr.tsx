@@ -3,7 +3,7 @@ import createServer from '@inertiajs/react/server';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import ReactDOMServer from 'react-dom/server';
 
-const appName = 'TicketFlow';
+const appName = 'TUVIO';
 
 createServer((page) =>
     createInertiaApp({

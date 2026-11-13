@@ -6,7 +6,20 @@ import { PageProps } from '@/types';
 import { Head, useForm, usePage } from '@inertiajs/react';
 import { FormEvent } from 'react';
 
-export default function ProfileSettings({ mustVerifyEmail, status }: PageProps<{ mustVerifyEmail: boolean; status?: string }>) {
+type TwoFactorState = {
+    enabled: boolean;
+    required: boolean;
+    pending: boolean;
+    qrSvg: string | null;
+    setupKey: string | null;
+    recoveryCodes: string[] | null;
+};
+
+export default function ProfileSettings({
+    mustVerifyEmail,
+    status,
+    twoFactor,
+}: PageProps<{ mustVerifyEmail: boolean; status?: string; twoFactor: TwoFactorState }>) {
     const { auth } = usePage<PageProps>().props;
     const user = auth.user!;
 
@@ -84,6 +97,8 @@ export default function ProfileSettings({ mustVerifyEmail, status }: PageProps<{
                         </form>
                 </Panel>
 
+                <TwoFactorPanel twoFactor={twoFactor} />
+
                 {/* Danger zone */}
                 <Panel title={<span className="text-danger">Delete account</span>} className="border-rose-500/30" bodyClassName="pt-2">
                         <p className="mt-1 text-sm text-slate-500">
@@ -98,5 +113,116 @@ export default function ProfileSettings({ mustVerifyEmail, status }: PageProps<{
                 </Panel>
             </div>
         </AppLayout>
+    );
+}
+
+function TwoFactorPanel({ twoFactor }: { twoFactor: TwoFactorState }) {
+    const { auth } = usePage<PageProps>().props;
+    const confirm = useForm({ code: '' });
+    const manage = useForm({ password: '' });
+
+    function confirmCode(e: FormEvent) {
+        e.preventDefault();
+        confirm.post('/settings/two-factor/confirm', { preserveScroll: true, onFinish: () => confirm.reset() });
+    }
+    function send(method: 'post' | 'delete', url: string) {
+        manage.submit(method, url, { preserveScroll: true, onFinish: () => manage.reset() });
+    }
+
+    const status = twoFactor.enabled ? (
+        <span className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">On</span>
+    ) : (
+        <span className="rounded-full bg-slate-500/10 px-2.5 py-0.5 text-xs font-semibold text-slate-600">Off</span>
+    );
+
+    const passwordField = (
+        <Field label="Confirm password" error={manage.errors.password}>
+            <Input
+                type="password"
+                value={manage.data.password}
+                onChange={(e) => manage.setData('password', e.target.value)}
+                autoComplete="current-password"
+            />
+        </Field>
+    );
+
+    return (
+        <Panel title={<span className="flex items-center gap-2">Two-factor authentication {status}</span>} bodyClassName="pt-2">
+            <p className="mt-1 text-sm text-slate-500">
+                Protect your account with a 6-digit code from an authenticator app (Google Authenticator, Authy, 1Password) every time you sign
+                in. Even if someone learns your password, they cannot get in without your phone.
+            </p>
+
+            {auth.user?.is_admin && !twoFactor.required && !twoFactor.enabled && (
+                <p className="mt-4 rounded-2xl bg-brand-500/10 px-4 py-2.5 text-sm text-ink">
+                    Your admin sign-ins are already protected by a 6-digit code we email you. An authenticator app is optional extra protection.
+                </p>
+            )}
+            {twoFactor.required && !twoFactor.enabled && (
+                <p className="mt-4 rounded-2xl bg-amber-500/10 px-4 py-2.5 text-sm text-amber-700">
+                    Administrator accounts must turn this on before they can open the admin area.
+                </p>
+            )}
+
+            {twoFactor.recoveryCodes && (
+                <div className="mt-5 rounded-2xl border border-tint/[0.07] bg-tint/[0.03] p-4">
+                    <p className="text-sm font-semibold text-ink">Recovery codes</p>
+                    <p className="mt-1 text-sm text-slate-500">
+                        Store these somewhere safe. Each one works once if you lose your phone. They will not be shown again.
+                    </p>
+                    <ul className="mt-3 grid grid-cols-2 gap-2 font-mono text-sm text-ink">
+                        {twoFactor.recoveryCodes.map((code) => (
+                            <li key={code} className="rounded-lg bg-card px-3 py-1.5">{code}</li>
+                        ))}
+                    </ul>
+                </div>
+            )}
+
+            {twoFactor.pending && twoFactor.qrSvg && (
+                <div className="mt-5 space-y-4">
+                    <div className="flex flex-col items-start gap-4 sm:flex-row">
+                        <div className="rounded-2xl bg-white p-3" dangerouslySetInnerHTML={{ __html: twoFactor.qrSvg }} />
+                        <div className="min-w-0 text-sm text-slate-500">
+                            <p>1. Scan this QR code with your authenticator app.</p>
+                            <p className="mt-2">Can't scan? Enter this key manually:</p>
+                            <p className="mt-1 break-all font-mono text-ink">{twoFactor.setupKey}</p>
+                            <p className="mt-2">2. Enter the 6-digit code the app shows.</p>
+                        </div>
+                    </div>
+                    <form onSubmit={confirmCode} className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                        <Field label="Authentication code" error={confirm.errors.code}>
+                            <Input
+                                value={confirm.data.code}
+                                onChange={(e) => confirm.setData('code', e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                inputMode="numeric"
+                                autoComplete="one-time-code"
+                                placeholder="123456"
+                            />
+                        </Field>
+                        <Button type="submit" disabled={confirm.processing}>Confirm and turn on</Button>
+                    </form>
+                </div>
+            )}
+
+            {!twoFactor.pending && (
+                <form onSubmit={(e) => e.preventDefault()} className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-end">
+                    {passwordField}
+                    {twoFactor.enabled ? (
+                        <>
+                            <Button type="button" variant="secondary" disabled={manage.processing} onClick={() => send('post', '/settings/two-factor/recovery-codes')}>
+                                New recovery codes
+                            </Button>
+                            <Button type="button" variant="danger" disabled={manage.processing} onClick={() => send('delete', '/settings/two-factor')}>
+                                Turn off
+                            </Button>
+                        </>
+                    ) : (
+                        <Button type="button" disabled={manage.processing} onClick={() => send('post', '/settings/two-factor')}>
+                            Turn on two-factor
+                        </Button>
+                    )}
+                </form>
+            )}
+        </Panel>
     );
 }

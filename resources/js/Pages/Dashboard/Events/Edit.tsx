@@ -1,37 +1,44 @@
 import { Badge } from '@/Components/ui/Badge';
 import { Button } from '@/Components/ui/Button';
 import { Panel } from '@/Components/app/Kit';
+import FeePayerChoice, { FeePayer } from '@/Components/app/FeePayerChoice';
 import { TicketTypeDraft, TicketTypeEditor, TicketTypeRecord, draftFromRecord, draftPayload, newDraft } from '@/Components/app/TicketTypeEditor';
 import { Field, Input, Select, Textarea } from '@/Components/ui/Input';
 import AppLayout from '@/Layouts/AppLayout';
 import { tierMeta } from '@/lib/ticketTiers';
 import { cn, money } from '@/lib/utils';
 import { PageProps } from '@/types';
-import { Head, router, useForm } from '@inertiajs/react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ExternalLink, Gift, ImageIcon, Pencil, Plus, Trash2, Upload, X } from 'lucide-react';
+import { ExternalLink, Gift, ImageIcon, Pencil, Plus, Smartphone, Trash2, Upload, X } from 'lucide-react';
 import { ChangeEvent, FormEvent, useEffect, useState } from 'react';
 
 type TT = TicketTypeRecord;
 interface Ev {
-    id: number; title: string; slug: string; description: string | null; status: string;
+    id: number; title: string; slug: string; description: string | null; status: string; review_note: string | null;
     type: string; visibility: string; event_category_id: number | null;
     start_at: string | null; end_at: string | null;
     venue_name: string | null; venue_address: string | null; city: string | null;
     online_url: string | null; currency: string; refund_policy: string | null;
+    fee_payer: FeePayer; commission_bps: number;
     public_url: string; cover_url: string | null; ticket_types: TT[];
+    sell_on_ussd: boolean;
 }
 
-const tone: Record<string, 'success' | 'warning' | 'neutral' | 'danger'> = {
-    published: 'success', draft: 'neutral', unpublished: 'warning', cancelled: 'danger',
+/** Upcoming events on USSD against the plan limit: null is unlimited, 0 means the plan has no USSD. */
+interface UssdUsage { used: number; limit: number | null }
+
+const tone: Record<string, 'success' | 'warning' | 'neutral' | 'danger' | 'brand'> = {
+    published: 'success', draft: 'neutral', unpublished: 'warning', cancelled: 'danger', in_review: 'brand', rejected: 'danger',
 };
 
-export default function EditEvent({ event, categories }: PageProps<{ event: Ev; categories: { id: number; name: string }[] }>) {
+export default function EditEvent({ event, categories, ussd }: PageProps<{ event: Ev; categories: { id: number; name: string }[]; ussd: UssdUsage }>) {
     const form = useForm<any>({
         title: event.title, description: event.description ?? '', event_category_id: event.event_category_id ?? '',
         type: event.type, visibility: event.visibility, start_at: event.start_at ?? '', end_at: event.end_at ?? '',
         venue_name: event.venue_name ?? '', venue_address: event.venue_address ?? '', city: event.city ?? '',
         online_url: event.online_url ?? '', currency: event.currency, refund_policy: event.refund_policy ?? '',
+        fee_payer: event.fee_payer,
         timezone: 'Africa/Kampala',
     });
     const [cover, setCover] = useState<File | null>(null);
@@ -67,7 +74,7 @@ export default function EditEvent({ event, categories }: PageProps<{ event: Ev; 
             title={event.title}
             subtitle={
                 <span className="flex flex-wrap items-center gap-2">
-                    <Badge tone={tone[event.status] ?? 'neutral'}>{event.status}</Badge>
+                    <Badge tone={tone[event.status] ?? 'neutral'}>{event.status.replace('_', ' ')}</Badge>
                     {event.status === 'published' && (
                         <a href={event.public_url} target="_blank" rel="noopener" className="inline-flex items-center gap-1 text-sm font-semibold text-brand-600 hover:underline">
                             View public page <ExternalLink className="h-3.5 w-3.5" />
@@ -76,14 +83,29 @@ export default function EditEvent({ event, categories }: PageProps<{ event: Ev; 
                 </span>
             }
             actions={
-                event.status !== 'published' ? (
-                    <Button onClick={() => router.post(`/dashboard/events/${event.slug}/publish`, {}, { preserveScroll: true })}>Publish event</Button>
+                event.status === 'in_review' ? (
+                    <Button variant="outline" onClick={() => router.post(`/dashboard/events/${event.slug}/unpublish`, {}, { preserveScroll: true })}>Withdraw from review</Button>
+                ) : event.status !== 'published' ? (
+                    <Button onClick={() => router.post(`/dashboard/events/${event.slug}/publish`, {}, { preserveScroll: true })}>
+                        {event.status === 'rejected' ? 'Resubmit for review' : 'Submit for review'}
+                    </Button>
                 ) : (
                     <Button variant="outline" onClick={() => router.post(`/dashboard/events/${event.slug}/unpublish`, {}, { preserveScroll: true })}>Unpublish</Button>
                 )
             }
         >
             <Head title={`Manage · ${event.title}`} />
+
+            {event.status === 'in_review' && (
+                <div className="mb-5 rounded-[1.25rem] border border-brand-400/30 bg-brand-500/10 px-5 py-4 text-sm text-ink">
+                    <strong>Waiting for approval.</strong> A TUVIO admin is reviewing this event. It goes live as soon as it is approved, and we will email you.
+                </div>
+            )}
+            {event.status === 'rejected' && (
+                <div className="mb-5 rounded-[1.25rem] border border-rose-400/30 bg-rose-500/10 px-5 py-4 text-sm text-ink">
+                    <strong>Changes requested.</strong> {event.review_note ?? 'An admin asked for changes before this event can go live.'} Update the event, then resubmit it for review.
+                </div>
+            )}
 
             <div className="grid gap-5 lg:grid-cols-3">
                 {/* Details */}
@@ -108,6 +130,7 @@ export default function EditEvent({ event, categories }: PageProps<{ event: Ev; 
                                 <Field label="Starts" error={form.errors.start_at}><Input type="datetime-local" value={form.data.start_at} onChange={(e) => form.setData('start_at', e.target.value)} /></Field>
                                 <Field label="Ends"><Input type="datetime-local" value={form.data.end_at} onChange={(e) => form.setData('end_at', e.target.value)} /></Field>
                             </div>
+                            <FeePayerChoice value={form.data.fee_payer} onChange={(v) => form.setData('fee_payer', v)} commissionBps={event.commission_bps} currency={event.currency} />
                             <Button type="submit" disabled={form.processing}>Save changes</Button>
                         </form>
                 </Panel>
@@ -126,6 +149,8 @@ export default function EditEvent({ event, categories }: PageProps<{ event: Ev; 
                                 {cover && <Button type="submit" className="mt-2 w-full" size="sm">Save cover</Button>}
                             </form>
                     </Panel>
+
+                    <UssdPanel slug={event.slug} enabled={event.sell_on_ussd} usage={ussd} />
 
                     {/* Ticket types */}
                     <Panel
@@ -163,6 +188,59 @@ export default function EditEvent({ event, categories }: PageProps<{ event: Ev; 
                 )}
             </AnimatePresence>
         </AppLayout>
+    );
+}
+
+function UssdPanel({ slug, enabled, usage }: { slug: string; enabled: boolean; usage: UssdUsage }) {
+    const [saving, setSaving] = useState(false);
+    const full = !enabled && usage.limit !== null && usage.used >= usage.limit;
+
+    function toggle() {
+        router.post(`/dashboard/events/${slug}/ussd`, { sell_on_ussd: !enabled }, {
+            preserveScroll: true,
+            onStart: () => setSaving(true),
+            onFinish: () => setSaving(false),
+        });
+    }
+
+    return (
+        <Panel title="Sell on USSD" subtitle="Buyers without data can dial the TUVIO USSD code and pay with Mobile Money." bodyClassName="pt-4">
+            {usage.limit === 0 ? (
+                <p className="text-sm text-slate-500">
+                    Your plan doesn't include USSD ticket sales.{' '}
+                    <Link href="/dashboard/subscription" className="font-semibold text-brand-600 hover:underline">Upgrade to sell on USSD</Link>
+                </p>
+            ) : (
+                <>
+                    <button
+                        type="button"
+                        role="switch"
+                        aria-checked={enabled}
+                        disabled={saving || full}
+                        onClick={toggle}
+                        className="flex w-full items-center justify-between gap-3 rounded-2xl bg-tint/[0.04] px-4 py-3 text-left text-sm font-semibold text-ink disabled:opacity-60"
+                    >
+                        <span className="inline-flex items-center gap-2">
+                            <Smartphone className="h-4 w-4 text-brand-500" /> {enabled ? 'On sale over USSD' : 'Not on USSD'}
+                        </span>
+                        <span className={cn('relative h-5 w-9 shrink-0 rounded-full transition-colors', enabled ? 'bg-brand-500' : 'bg-tint/15')}>
+                            <span className={cn('absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all', enabled ? 'left-[1.125rem]' : 'left-0.5')} />
+                        </span>
+                    </button>
+                    <p className="mt-3 text-xs text-slate-500">
+                        {usage.limit === null
+                            ? 'Your plan includes USSD sales for unlimited events.'
+                            : `${usage.used} of ${usage.limit} USSD events in use. An event frees its slot once it starts.`}
+                        {full && (
+                            <>
+                                {' '}Switch another event off, or{' '}
+                                <Link href="/dashboard/subscription" className="font-semibold text-brand-600 hover:underline">upgrade for unlimited</Link>.
+                            </>
+                        )}
+                    </p>
+                </>
+            )}
+        </Panel>
     );
 }
 

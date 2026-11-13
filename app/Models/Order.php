@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 class Order extends Model
 {
     protected $fillable = [
-        'reference', 'event_id', 'user_id', 'promo_code_id',
+        'reference', 'event_id', 'user_id', 'promo_code_id', 'promoter_id',
         'buyer_name', 'buyer_email', 'buyer_phone', 'status', 'currency',
         'subtotal_minor', 'discount_minor', 'fee_minor', 'tax_minor',
         'total_minor', 'commission_minor',
@@ -47,6 +47,16 @@ class Order extends Model
         return $this->belongsTo(PromoCode::class);
     }
 
+    public function promoter(): BelongsTo
+    {
+        return $this->belongsTo(Promoter::class);
+    }
+
+    public function review(): HasOne
+    {
+        return $this->hasOne(EventReview::class);
+    }
+
     public function items(): HasMany
     {
         return $this->hasMany(OrderItem::class);
@@ -75,6 +85,18 @@ class Order extends Model
     /** Organizer net = subtotal - discount - commission (buyer-facing fees are platform income). */
     public function organizerNetMinor(): int
     {
-        return $this->subtotal_minor - $this->discount_minor - $this->commission_minor;
+        return $this->subtotal_minor - $this->discount_minor - $this->commission_minor - $this->organizerTaxMinor();
+    }
+
+    /** Tax on the platform fee is the organizer's to bear when they absorbed the fee as commission. */
+    public function organizerTaxMinor(): int
+    {
+        return $this->commission_minor > 0 ? $this->tax_minor : 0;
+    }
+
+    /** Tax the buyer paid on top, alongside a booking fee. */
+    public function buyerTaxMinor(): int
+    {
+        return $this->fee_minor > 0 ? $this->tax_minor : 0;
     }
 }

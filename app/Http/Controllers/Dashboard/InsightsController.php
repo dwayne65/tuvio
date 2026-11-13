@@ -157,12 +157,24 @@ class InsightsController extends Controller
             'series' => $series,
             'totals' => [
                 'gross_minor' => (int) (clone $allPaid)->sum('total_minor'),
-                'net_minor' => (int) ((clone $allPaid)->sum('subtotal_minor') - (clone $allPaid)->sum('discount_minor') - (clone $allPaid)->sum('commission_minor')),
+                'net_minor' => (int) ((clone $allPaid)->sum('subtotal_minor') - (clone $allPaid)->sum('discount_minor') - (clone $allPaid)->sum('commission_minor')
+                    - (clone $allPaid)->where('commission_minor', '>', 0)->sum('tax_minor')),
                 'orders' => (clone $allPaid)->count(),
                 'tickets' => Ticket::whereHas('event', fn ($q) => $q->where('organization_id', $org->id))->whereIn('status', ['issued', 'used'])->count(),
             ],
             'top_events' => $topEvents,
+            'today' => [
+                'gross_minor' => (int) (clone $allPaid)->where('paid_at', '>=', now()->startOfDay())->sum('total_minor'),
+                'orders' => (clone $allPaid)->where('paid_at', '>=', now()->startOfDay())->count(),
+                'checked_in' => Ticket::whereHas('event', fn ($q) => $q->where('organization_id', $org->id))->where('used_at', '>=', now()->startOfDay())->count(),
+            ],
+            'recent' => (clone $allPaid)->with('event:id,title')->latest('paid_at')->limit(8)->get()
+                ->map(fn (Order $o) => [
+                    'reference' => $o->reference, 'buyer' => $o->buyer_name, 'event' => $o->event->title,
+                    'total_minor' => $o->total_minor, 'at' => $o->paid_at?->toIso8601String(),
+                ]),
             'currency' => $org->default_currency,
+            'generated_at' => now()->toIso8601String(),
         ]);
     }
 }

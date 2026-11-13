@@ -12,5 +12,7 @@ final class VerificationResult
         public readonly int $processorFeeMinor = 0,
         public readonly ?string $method = null,
         public readonly array $raw = [],
+        // Not paid yet but not failed either (e.g. waiting for the buyer's Mobile Money PIN).
+        public readonly bool $pending = false,
     ) {}
 }

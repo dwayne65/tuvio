@@ -1,4 +1,5 @@
 import { EventCard } from '@/Components/EventCard';
+import { EventReviews, ReviewSummary } from '@/Components/EventReviews';
 import { Badge } from '@/Components/ui/Badge';
 import { Button } from '@/Components/ui/Button';
 import PublicLayout from '@/Layouts/PublicLayout';
@@ -30,11 +31,13 @@ interface EventDetail extends EventSummary {
     timezone: string;
     currency: string;
     refund_policy: string | null;
+    /** Booking fee added at checkout, in basis points; 0 when the organizer pays it. */
+    booking_fee_bps: number;
     schedule: { id: number; title: string; description: string | null; speaker: string | null; starts_at: string | null }[];
     ticket_types: TicketTypeDTO[];
 }
 
-export default function EventShow({ event, related }: PageProps<{ event: EventDetail; related: EventSummary[] }>) {
+export default function EventShow({ event, related, reviews }: PageProps<{ event: EventDetail; related: EventSummary[]; reviews: ReviewSummary }>) {
     const [qty, setQty] = useState<Record<number, number>>({});
     const [expanded, setExpanded] = useState(false);
 
@@ -85,7 +88,7 @@ export default function EventShow({ event, related }: PageProps<{ event: EventDe
                     ) : (
                         <div
                             className="h-full w-full"
-                            style={{ background: `radial-gradient(110% 80% at 75% 10%, ${event.category?.color ?? '#2f7dff'}, #0b0d14 70%)` }}
+                            style={{ background: `radial-gradient(110% 80% at 75% 10%, ${event.category?.color ?? '#6418f5'}, #0b0d14 70%)` }}
                         />
                     )}
                     <div className="absolute inset-0 bg-gradient-to-t from-[#07080c] via-[#07080c]/40 to-[#07080c]/30" />
@@ -103,7 +106,11 @@ export default function EventShow({ event, related }: PageProps<{ event: EventDe
 
                     <div className="absolute inset-x-5 bottom-6 md:inset-x-10 md:bottom-10">
                         <div className="flex flex-wrap items-center gap-2">
-                            {event.category && <Badge tone="brand">{event.category.name}</Badge>}
+                            {event.category && (
+                                <span className="rounded-full border border-white/15 bg-brand-500/85 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur-md">
+                                    {event.category.name}
+                                </span>
+                            )}
                             <span className="rounded-full border border-white/15 bg-black/30 px-2.5 py-1 text-xs font-semibold capitalize text-white backdrop-blur-md">
                                 {event.type}
                             </span>
@@ -192,6 +199,8 @@ export default function EventShow({ event, related }: PageProps<{ event: EventDe
                                 <p className="mt-1 text-sm text-slate-500">{event.refund_policy}</p>
                             </section>
                         )}
+
+                        <EventReviews slug={event.slug} reviews={reviews} />
                     </div>
 
                     {/* Ticket picker */}
@@ -262,7 +271,10 @@ export default function EventShow({ event, related }: PageProps<{ event: EventDe
                                 <Button onClick={checkout} className="mt-4 w-full" size="lg" disabled={event.ticket_types.length === 0}>
                                     {count > 0 ? 'Get tickets' : 'Select tickets'} <ArrowRight className="h-4 w-4" />
                                 </Button>
-                                <p className="mt-3 text-center text-xs text-slate-400">Tickets are emailed instantly · Mobile Money & cards</p>
+                                <p className="mt-3 text-center text-xs text-slate-400">
+                                    {event.booking_fee_bps > 0 && total > 0 && `+ ${event.booking_fee_bps / 100}% booking fee at checkout · `}
+                                    Tickets are emailed instantly · Mobile Money & cards
+                                </p>
                             </div>
                         </div>
                     </aside>
@@ -297,7 +309,7 @@ export default function EventShow({ event, related }: PageProps<{ event: EventDe
                     </button>
                     <div className="flex h-[3.25rem] items-center gap-1.5 pl-2 pr-4 text-right">
                         <div>
-                            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">{count > 0 ? 'Total' : 'From'}</p>
+                            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">{count > 0 ? (event.booking_fee_bps > 0 ? 'Total + fee' : 'Total') : 'From'}</p>
                             <p className="text-sm font-extrabold text-ink">{totalLabel}</p>
                         </div>
                         <ChevronsRight className="h-4 w-4 text-slate-400" />

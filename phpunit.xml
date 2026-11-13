@@ -30,6 +30,8 @@
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="TICKETFLOW_DEMO_MODE" value="false"/>
+        <!-- Order-amount tests assume no tax on the fee; PlatformFeesTest sets the rate it needs. -->
+        <env name="TICKETFLOW_TAX_BPS" value="0"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>

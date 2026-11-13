@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>TUVIO — Coming soon</title>
+    <meta name="description" content="TUVIO is almost here. Discover events, buy tickets and check in. Life Happens Here.">
+    <meta name="theme-color" content="#6418f5">
+    <meta name="robots" content="index, follow">
+
+    <link rel="canonical" href="https://tuvio.org/">
+
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://tuvio.org/">
+    <meta property="og:site_name" content="TUVIO">
+    <meta property="og:title" content="TUVIO — Coming soon">
+    <meta property="og:description" content="Discover events, buy tickets and check in. Life Happens Here.">
+    <meta property="og:image" content="https://tuvio.org/brand/tuvio-logo.png">
+
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/brand/apple-touch-icon.png">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* TUVIO "Daylight" palette, mirrored from resources/css/app.css */
+        :root {
+            --canvas: #f5f7fb;
+            --card: #ffffff;
+            --ink: #0d1020;
+            --muted: #64748b;
+            --tint: 13 16 32;
+            --brand: #6418f5;
+            --brand-soft: #8b5cff;
+            --glow-a: rgb(100 24 245 / 0.14);
+            --glow-b: rgb(100 24 245 / 0.06);
+            --shadow: 0 1px 2px rgb(13 16 32 / 0.04), 0 18px 40px -24px rgb(30 50 110 / 0.25);
+            color-scheme: light;
+        }
+
+        /* "Midnight" palette */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --canvas: #07080c;
+                --card: #12141b;
+                --ink: #f3f5fa;
+                --muted: #959cb0;
+                --tint: 255 255 255;
+                --brand: #9b74ff;
+                --brand-soft: #b9a0ff;
+                --glow-a: rgb(139 92 255 / 0.22);
+                --glow-b: rgb(139 92 255 / 0.08);
+                --shadow: inset 0 1px 0 rgb(255 255 255 / 0.04), 0 24px 48px -28px rgb(0 0 0 / 0.9);
+                color-scheme: dark;
+            }
+        }
+
+        * { box-sizing: border-box; }
+
+        html, body { margin: 0; min-height: 100%; }
+
+        body {
+            min-height: 100vh;
+            min-height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            background:
+                radial-gradient(60rem 40rem at 50% -10%, var(--glow-a), transparent 70%),
+                radial-gradient(40rem 30rem at 100% 100%, var(--glow-b), transparent 70%),
+                var(--canvas);
+            color: var(--ink);
+            font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        header, footer {
+            width: 100%;
+            max-width: 72rem;
+            margin: 0 auto;
+            padding: 1.5rem 1rem;
+        }
+
+        header img { height: 2.25rem; width: auto; display: block; }
+
+        main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 2rem 1rem 3rem;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.375rem 0.875rem;
+            border-radius: 999px;
+            border: 1px solid rgb(var(--tint) / 0.1);
+            background: rgb(var(--tint) / 0.03);
+            font-size: 0.8125rem;
+            font-weight: 600;
+            color: var(--muted);
+        }
+
+        .badge::before {
+            content: '';
+            width: 0.5rem;
+            height: 0.5rem;
+            border-radius: 50%;
+            background: var(--brand);
+            box-shadow: 0 0 0 0 var(--brand);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgb(100 24 245 / 0.5); }
+            70% { box-shadow: 0 0 0 0.5rem rgb(100 24 245 / 0); }
+            100% { box-shadow: 0 0 0 0 rgb(100 24 245 / 0); }
+        }
+
+        h1 {
+            margin: 1.5rem 0 1rem;
+            max-width: 48rem;
+            font-family: 'Instrument Serif', ui-serif, Georgia, serif;
+            font-weight: 400;
+            font-size: clamp(2.75rem, 9vw, 5.5rem);
+            line-height: 1;
+            letter-spacing: -0.02em;
+        }
+
+        h1 em { color: var(--brand); }
+
+        .lead {
+            margin: 0;
+            max-width: 34rem;
+            font-size: clamp(1rem, 2.5vw, 1.125rem);
+            line-height: 1.6;
+            color: var(--muted);
+        }
+
+        .countdown {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 0.75rem;
+            width: 100%;
+            max-width: 32rem;
+            margin-top: 2.5rem;
+        }
+
+        .unit {
+            padding: 1.25rem 0.5rem 1rem;
+            border-radius: 1.25rem;
+            border: 1px solid rgb(var(--tint) / 0.08);
+            background: var(--card);
+            box-shadow: var(--shadow);
+        }
+
+        .unit strong {
+            display: block;
+            font-size: clamp(1.75rem, 7vw, 2.5rem);
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            line-height: 1;
+        }
+
+        .unit span {
+            display: block;
+            margin-top: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--muted);
+        }
+
+        .launch-date {
+            margin-top: 1.25rem;
+            font-size: 0.875rem;
+            color: var(--muted);
+        }
+
+        .launched .countdown { display: none; }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+            gap: 0.75rem;
+            width: 100%;
+            max-width: 60rem;
+            margin-top: 3.5rem;
+            text-align: left;
+        }
+
+        .feature {
+            padding: 1.25rem;
+            border-radius: 1.25rem;
+            border: 1px solid rgb(var(--tint) / 0.08);
+            background: var(--card);
+            box-shadow: var(--shadow);
+        }
+
+        .feature h2 {
+            margin: 0 0 0.5rem;
+            font-size: 1rem;
+            font-weight: 700;
+        }
+
+        .feature p {
+            margin: 0;
+            font-size: 0.875rem;
+            line-height: 1.55;
+            color: var(--muted);
+        }
+
+        .domain {
+            margin-top: 2.5rem;
+            font-size: 0.9375rem;
+            color: var(--muted);
+        }
+
+        .domain a {
+            color: var(--brand);
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .domain a:hover { text-decoration: underline; }
+
+        footer {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            gap: 0.5rem;
+            font-size: 0.8125rem;
+            color: var(--muted);
+        }
+
+        @media (max-width: 380px) {
+            .countdown { gap: 0.5rem; }
+            .unit { padding: 1rem 0.25rem 0.75rem; border-radius: 1rem; }
+            .unit span { font-size: 0.625rem; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .badge::before { animation: none; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <picture>
+            <source srcset="/brand/tuvio-logo-dark.png" media="(prefers-color-scheme: dark)">
+            <img src="/brand/tuvio-logo.png" alt="TUVIO" width="130" height="36">
+        </picture>
+    </header>
+
+    <main id="main">
+        <span class="badge">Upcoming system</span>
+
+        <h1>Something new is <em>coming</em>.</h1>
+
+        <p class="lead">
+            TUVIO is almost here: discover events, buy tickets and check in, all in one place.
+            We're putting on the finishing touches.
+        </p>
+
+        <div class="countdown" role="timer" aria-live="off" aria-label="Time until launch">
+            <div class="unit"><strong data-unit="days">--</strong><span>Days</span></div>
+            <div class="unit"><strong data-unit="hours">--</strong><span>Hours</span></div>
+            <div class="unit"><strong data-unit="minutes">--</strong><span>Minutes</span></div>
+            <div class="unit"><strong data-unit="seconds">--</strong><span>Seconds</span></div>
+        </div>
+
+        <p class="launch-date" id="launch-date"></p>
+
+        <section class="features" aria-label="What TUVIO does">
+            <article class="feature">
+                <h2>Discover &amp; book</h2>
+                <p>Browse concerts, conferences, sports and community events, then pay in seconds with mobile money or card.</p>
+            </article>
+            <article class="feature">
+                <h2>Digital tickets</h2>
+                <p>Every ticket arrives as a secure QR code in your account and inbox. No printing, no lost paper.</p>
+            </article>
+            <article class="feature">
+                <h2>Fast check-in</h2>
+                <p>Gate staff scan tickets at multiple entrances, even offline, while organisers watch attendance live.</p>
+            </article>
+            <article class="feature">
+                <h2>Built for organisers</h2>
+                <p>Ticket tiers, promo codes, promoters, fundraising campaigns, sales insights and payouts, all from one dashboard.</p>
+            </article>
+        </section>
+
+        <p class="domain">Find us at <a href="https://tuvio.org/">tuvio.org</a></p>
+    </main>
+
+    <footer>
+        <span>&copy; <span id="year">2026</span> TUVIO &middot; tuvio.org</span>
+        <span>Life Happens Here.</span>
+    </footer>
+
+    <script>
+        /**
+         * Launch moment. Change this one value to move the countdown.
+         * Keep the timezone offset (+03:00 is East Africa Time).
+         */
+        const LAUNCH_AT = '2026-11-18T00:00:00+03:00';
+
+        const launchAt = new Date(LAUNCH_AT);
+        const units = {
+            days: document.querySelector('[data-unit="days"]'),
+            hours: document.querySelector('[data-unit="hours"]'),
+            minutes: document.querySelector('[data-unit="minutes"]'),
+            seconds: document.querySelector('[data-unit="seconds"]'),
+        };
+
+        document.getElementById('year').textContent = new Date().getFullYear();
+        document.getElementById('launch-date').textContent = 'Launching ' + launchAt.toLocaleDateString(undefined, {
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+        });
+
+        const pad = (value) => String(value).padStart(2, '0');
+
+        function tick() {
+            const remaining = launchAt.getTime() - Date.now();
+
+            if (remaining <= 0) {
+                document.body.classList.add('launched');
+                document.getElementById('launch-date').textContent = 'Launching any moment now. Check back shortly.';
+                clearInterval(timer);
+                return;
+            }
+
+            const totalSeconds = Math.floor(remaining / 1000);
+            units.days.textContent = Math.floor(totalSeconds / 86400);
+            units.hours.textContent = pad(Math.floor(totalSeconds / 3600) % 24);
+            units.minutes.textContent = pad(Math.floor(totalSeconds / 60) % 60);
+            units.seconds.textContent = pad(totalSeconds % 60);
+        }
+
+        const timer = setInterval(tick, 1000);
+        tick();
+    </script>
+</body>
+</html>

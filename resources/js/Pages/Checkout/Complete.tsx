@@ -1,9 +1,10 @@
 import { Button } from '@/Components/ui/Button';
 import PublicLayout from '@/Layouts/PublicLayout';
 import { PageProps } from '@/types';
-import { Head, usePage } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import { motion } from 'framer-motion';
-import { Check, Download, Mail, Ticket, X } from 'lucide-react';
+import { Check, Download, Lock, Mail, Ticket, X } from 'lucide-react';
+import { useState } from 'react';
 
 interface Order {
     reference: string;
@@ -11,6 +12,9 @@ interface Order {
     total_minor: number;
     currency: string;
     buyer_email: string;
+    can_retry: boolean;
+    payment_method: 'mobile_money' | 'card' | null;
+    reserved_until: string | null;
     event: { title: string; slug: string };
     tickets: { code: string; type: string; attendee_name: string | null; download_url: string }[];
 }
@@ -18,6 +22,18 @@ interface Order {
 export default function Complete({ order }: PageProps<{ order: Order }>) {
     const { flash, auth } = usePage<PageProps>().props;
     const paid = order.status === 'paid';
+    const [retrying, setRetrying] = useState(false);
+    const heldUntil = order.reserved_until
+        ? new Date(order.reserved_until).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        : null;
+
+    function retryPayment() {
+        router.post(
+            `/checkout/${order.reference}/pay`,
+            {},
+            { onStart: () => setRetrying(true), onFinish: () => setRetrying(false) },
+        );
+    }
 
     return (
         <PublicLayout>
@@ -83,12 +99,25 @@ export default function Complete({ order }: PageProps<{ order: Order }>) {
                     </>
                 )}
 
+                {!paid && order.can_retry && heldUntil && (
+                    <p className="mt-4 text-sm text-slate-500">Your tickets are held for you until {heldUntil}.</p>
+                )}
+
                 <div className="mt-8 flex flex-col justify-center gap-2.5 sm:flex-row">
                     {paid && auth.user && <Button href="/my-account/tickets" size="lg">View my tickets</Button>}
+                    {!paid && order.can_retry && (
+                        <Button onClick={() => retryPayment()} disabled={retrying} size="lg">
+                            <Lock className="h-4 w-4" /> Try payment again
+                        </Button>
+                    )}
                     <Button href={`/events/${order.event.slug}`} variant="outline" size="lg">
                         Back to event
                     </Button>
                 </div>
+                <p className="mt-6 text-center text-sm text-slate-500">
+                    Problem with your order?{' '}
+                    <a href={`/contact?order=${order.reference}`} className="font-semibold text-brand-300 hover:underline">Contact support</a>
+                </p>
             </div>
         </PublicLayout>
     );

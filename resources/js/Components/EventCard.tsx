@@ -11,6 +11,13 @@ function priceLabel(event: EventSummary): string {
     return event.price_from ? event.price_from.formatted : 'On sale';
 }
 
+const availabilityLabels: Record<EventSummary['availability'], { label: string; dot: string } | null> = {
+    on_sale: { label: 'Tickets available', dot: 'bg-emerald-400' },
+    selling_fast: { label: 'Selling fast', dot: 'bg-amber-400' },
+    sold_out: { label: 'Sold out', dot: 'bg-rose-400' },
+    not_on_sale: null,
+};
+
 function placeLabel(event: EventSummary): string {
     return event.type === 'online' ? 'Online' : [event.venue_name, event.city].filter(Boolean).join(', ') || 'TBA';
 }
@@ -21,7 +28,7 @@ function Cover({ event, className }: { event: EventSummary; className?: string }
     ) : (
         <div
             className={cn('relative h-full w-full overflow-hidden', className)}
-            style={{ background: `radial-gradient(120% 90% at 80% 0%, ${event.category?.color ?? '#2f7dff'}, #0b0d14 70%)` }}
+            style={{ background: `radial-gradient(120% 90% at 80% 0%, ${event.category?.color ?? '#6418f5'}, #0b0d14 70%)` }}
         >
             <div className="absolute -bottom-10 -left-6 h-40 w-40 rounded-full border-[18px] border-white/[0.07]" />
             <div className="absolute right-6 top-6 h-16 w-16 rounded-full bg-white/10 blur-xl" />
@@ -32,6 +39,8 @@ function Cover({ event, className }: { event: EventSummary; className?: string }
 /** Poster-style event card. `compact` renders a horizontal list row. */
 export function EventCard({ event, compact = false }: { event: EventSummary; compact?: boolean }) {
     const start = new Date(event.start_at);
+    const availability = availabilityLabels[event.availability];
+    const soldOut = event.availability === 'sold_out';
 
     if (compact) {
         return (
@@ -77,7 +86,7 @@ export function EventCard({ event, compact = false }: { event: EventSummary; com
                         )}
                     </div>
                     <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-white/15 bg-black/35 text-center text-white backdrop-blur-md">
-                        <span className="text-[10px] font-bold uppercase leading-none tracking-wide text-[#8db8ff]">
+                        <span className="text-[10px] font-bold uppercase leading-none tracking-wide text-[#c4a8ff]">
                             {start.toLocaleDateString('en-US', { month: 'short' })}
                         </span>
                         <span className="-mt-2 text-lg font-extrabold leading-none">{start.getDate()}</span>
@@ -86,27 +95,38 @@ export function EventCard({ event, compact = false }: { event: EventSummary; com
 
                 <div className="relative p-4 sm:p-5">
                     <p className="truncate text-[11px] font-semibold uppercase tracking-[0.16em] text-white/55">
-                        {event.organization?.name ?? 'TicketFlow picks'}
+                        {event.organization?.name ?? 'TUVIO picks'}
                     </p>
                     <h3 className="mt-1.5 line-clamp-2 font-display text-[1.85rem] leading-[1.02] text-white">{event.title}</h3>
                     <div className="mt-3 flex flex-col gap-1 text-[13px] text-white/75">
                         <span className="flex items-center gap-1.5">
-                            <CalendarDays className="h-3.5 w-3.5 text-[#8db8ff]" />
-                            {formatDate(event.start_at, { weekday: 'short' })}
+                            <CalendarDays className="h-3.5 w-3.5 text-[#c4a8ff]" />
+                            {formatDate(event.start_at, { weekday: 'short', year: undefined, hour: 'numeric', minute: '2-digit' })}
                         </span>
                         <span className="flex items-center gap-1.5 truncate">
-                            <MapPin className="h-3.5 w-3.5 shrink-0 text-[#8db8ff]" />
+                            <MapPin className="h-3.5 w-3.5 shrink-0 text-[#c4a8ff]" />
                             {placeLabel(event)}
                         </span>
                     </div>
 
-                    <div className="mt-4 flex items-center justify-between gap-3 rounded-full border border-white/10 bg-white/[0.06] p-1.5 pl-4 backdrop-blur-md">
+                    {availability && (
+                        <p className="mt-3 inline-flex items-center gap-1.5 text-[12px] font-semibold text-white/80">
+                            <span className={cn('h-1.5 w-1.5 rounded-full', availability.dot)} /> {availability.label}
+                        </p>
+                    )}
+
+                    <div className="mt-3 flex items-center justify-between gap-3 rounded-full border border-white/10 bg-white/[0.06] p-1.5 pl-4 backdrop-blur-md">
                         <span className="truncate text-sm font-bold text-white">
                             {!event.is_free && event.price_from && <span className="mr-1 text-xs font-medium text-white/55">from</span>}
                             {priceLabel(event)}
                         </span>
-                        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-brand-500 px-3.5 py-2 text-xs font-bold text-white glow-blue transition-transform group-hover:-translate-y-0.5">
-                            Get tickets <ArrowUpRight className="h-3.5 w-3.5" />
+                        <span
+                            className={cn(
+                                'inline-flex shrink-0 items-center gap-1 rounded-full px-3.5 py-2 text-xs font-bold text-white transition-transform group-hover:-translate-y-0.5',
+                                soldOut ? 'bg-white/15' : 'bg-brand-500 glow-blue',
+                            )}
+                        >
+                            {soldOut ? 'View event' : 'Get tickets'} <ArrowUpRight className="h-3.5 w-3.5" />
                         </span>
                     </div>
                 </div>

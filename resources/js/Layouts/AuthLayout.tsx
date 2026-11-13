@@ -21,8 +21,8 @@ export default function AuthLayout({
             {/* Form side */}
             <div className="relative flex w-full flex-col px-5 pb-10 pt-[max(1.25rem,env(safe-area-inset-top))] sm:px-6 lg:w-1/2 lg:justify-center lg:px-20 lg:py-12">
                 <div className="mx-auto flex w-full max-w-sm flex-1 flex-col lg:flex-none">
-                    <Link href="/" aria-label="TicketFlow home">
-                        <Logo />
+                    <Link href="/" aria-label="TUVIO home" className="inline-block">
+                        <Logo variant="tagline" className="h-12 sm:h-14" />
                     </Link>
                     <div className="mt-auto pt-16 lg:mt-12 lg:pt-0">
                         <h1 className="text-[2.1rem] font-extrabold leading-[1.05] tracking-[-0.045em] text-ink">{title}</h1>

@@ -24,7 +24,7 @@ class PayoutPaidNotification extends Notification
             ->subject('Your payout has been processed')
             ->greeting('Good news!')
             ->line("Payout {$this->payout->reference} of {$this->payout->currency} ".number_format($this->payout->amount_minor / 100).' has been processed.')
-            ->line('Thank you for using TicketFlow.');
+            ->line('Thank you for using TUVIO.');
     }
 
     public function toArray(object $notifiable): array

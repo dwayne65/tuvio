@@ -47,6 +47,7 @@ export default function Scanner({
     const [syncing, setSyncing] = useState(false);
     const [preparing, setPreparing] = useState(false);
     const [gate, setGate] = useState<string>('');
+    const [cameraError, setCameraError] = useState<string | null>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
     const lastRef = useRef<string>('');
     const manifestRef = useRef<Manifest | null>(null);
@@ -213,30 +214,54 @@ export default function Scanner({
         }
     }, [event.slug, gate, scanOffline, show]);
 
-    // Camera scanning via the native BarcodeDetector where available.
+    // Camera scanning: the native BarcodeDetector where available, otherwise jsQR
+    // (loaded on demand) for iPhone Safari and Firefox.
     useEffect(() => {
         if (!scanning) return;
         let stream: MediaStream | null = null;
         let raf = 0;
-        const Detector = (window as any).BarcodeDetector;
-        if (!Detector) {
-            setScanning(false);
-            return;
-        }
-        const detector = new Detector({ formats: ['qr_code'] });
+        let stopped = false;
 
         (async () => {
             try {
+                const Detector = (window as any).BarcodeDetector;
+                let read: (video: HTMLVideoElement) => Promise<string | null>;
+                if (Detector) {
+                    const detector = new Detector({ formats: ['qr_code'] });
+                    read = async (video) => {
+                        const codes = await detector.detect(video);
+                        return codes.length ? codes[0].rawValue : null;
+                    };
+                } else {
+                    const jsQR = (await import('jsqr')).default;
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
+                    read = async (video) => {
+                        // Downscale large frames; QR codes on a phone screen read fine at 640px.
+                        const scale = Math.min(1, 640 / Math.max(video.videoWidth, video.videoHeight));
+                        canvas.width = Math.round(video.videoWidth * scale);
+                        canvas.height = Math.round(video.videoHeight * scale);
+                        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                        const frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                        return jsQR(frame.data, frame.width, frame.height, { inversionAttempts: 'dontInvert' })?.data || null;
+                    };
+                }
+
                 stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                if (stopped) {
+                    stream.getTracks().forEach((t) => t.stop());
+                    return;
+                }
                 if (videoRef.current) {
                     videoRef.current.srcObject = stream;
                     await videoRef.current.play();
                 }
                 const tick = async () => {
+                    if (stopped) return;
                     if (videoRef.current && videoRef.current.readyState === 4) {
                         try {
-                            const codes = await detector.detect(videoRef.current);
-                            if (codes.length) await submit(codes[0].rawValue);
+                            const value = await read(videoRef.current);
+                            if (value) await submit(value);
                         } catch { /* frame skip */ }
                     }
                     raf = requestAnimationFrame(tick);
@@ -244,17 +269,19 @@ export default function Scanner({
                 raf = requestAnimationFrame(tick);
             } catch {
                 setScanning(false);
+                setCameraError('Camera access was blocked or no camera was found. Allow camera access, or type the ticket code below.');
             }
         })();
 
         return () => {
+            stopped = true;
             cancelAnimationFrame(raf);
             stream?.getTracks().forEach((t) => t.stop());
         };
     }, [scanning, submit]);
 
     const p = result ? palette[result.result] ?? palette.invalid : null;
-    const cameraSupported = typeof window !== 'undefined' && 'BarcodeDetector' in window;
+    const cameraSupported = typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia;
     const pct = stats.sold > 0 ? Math.round((stats.checked_in / stats.sold) * 100) : 0;
 
     return (
@@ -365,7 +392,7 @@ export default function Scanner({
                                 ))}
                                 {scanning && (
                                     <motion.span
-                                        className="absolute inset-x-2 h-0.5 rounded-full bg-brand-400 shadow-[0_0_16px_4px_rgb(47_125_255/0.6)]"
+                                        className="absolute inset-x-2 h-0.5 rounded-full bg-brand-400 shadow-[0_0_16px_4px_rgb(124_70_255/0.6)]"
                                         animate={{ top: ['8%', '92%', '8%'] }}
                                         transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
                                     />
@@ -383,14 +410,15 @@ export default function Scanner({
                     </div>
 
                     {cameraSupported ? (
-                        <Button className="mt-4 w-full" size="lg" variant={scanning ? 'outline' : 'primary'} onClick={() => setScanning((s) => !s)}>
+                        <Button className="mt-4 w-full" size="lg" variant={scanning ? 'outline' : 'primary'} onClick={() => { setCameraError(null); setScanning((s) => !s); }}>
                             <ScanLine className="h-4 w-4" /> {scanning ? 'Stop camera' : 'Start scanning'}
                         </Button>
                     ) : (
                         <p className="mt-4 rounded-2xl bg-amber-500/10 px-4 py-3 text-center text-sm text-amber-700">
-                            This browser can’t read QR codes from the camera. Use Chrome on Android, or type the ticket code (e.g. TKT-…) below.
+                            This browser can’t open the camera here (it needs HTTPS). Type the ticket code (e.g. TKT-…) below.
                         </p>
                     )}
+                    {cameraError && <p className="mt-3 rounded-2xl bg-rose-500/10 px-4 py-3 text-center text-sm text-rose-700 dark:text-rose-300">{cameraError}</p>}
 
                     <form
                         onSubmit={(e: FormEvent) => { e.preventDefault(); submit(manual); setManual(''); }}

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Event;
 use App\Models\EventCategory;
+use App\Models\Promoter;
 use App\Support\EventPresenter;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -61,11 +62,17 @@ class EventController extends Controller
         ]);
     }
 
-    public function show(Event $event): Response
+    public function show(Request $request, Event $event): Response
     {
-        abort_unless($event->status === 'published' || $event->visibility !== 'private', 404);
+        // Until an admin approves it, only the organizer's team and admins can preview an event.
+        $user = $request->user();
+        abort_unless(
+            $event->isPublished() || ($user && ($user->isAdmin() || $user->belongsToOrganization($event->organization))),
+            404,
+        );
 
         $event->increment('views_count');
+        $this->rememberReferral($request, $event);
         $event->load(['category', 'organization', 'scheduleItems' => fn ($q) => $q->orderBy('sort'), 'ticketTypes' => fn ($q) => $q->where('is_hidden', false)->orderBy('sort')]);
 
         $related = Event::query()->public()->upcoming()
@@ -84,6 +91,8 @@ class EventController extends Controller
                 'timezone' => $event->timezone,
                 'currency' => $event->currency,
                 'refund_policy' => $event->refund_policy,
+                // Booking fee rate added at checkout when the organizer passes the fee to buyers.
+                'booking_fee_bps' => $event->passesFeeToBuyer() ? $event->commissionBps() : 0,
                 'latitude' => $event->latitude,
                 'longitude' => $event->longitude,
                 'schedule' => $event->scheduleItems->map(fn ($s) => [
@@ -99,6 +108,40 @@ class EventController extends Controller
                 ]),
             ],
             'related' => $related->map(fn ($e) => EventPresenter::summary($e)),
+            'reviews' => $this->reviewSummary($event),
         ]);
+    }
+
+    /** Credit a promoter's ?ref= link for later checkout (per organization, last click wins). */
+    private function rememberReferral(Request $request, Event $event): void
+    {
+        $code = $request->string('ref')->trim()->upper()->value();
+        if ($code === '') {
+            return;
+        }
+
+        $promoter = Promoter::where('organization_id', $event->organization_id)->where('code', $code)->first();
+        if ($promoter?->covers($event)) {
+            $promoter->increment('clicks');
+            $request->session()->put("referrals.{$event->organization_id}", $promoter->id);
+        }
+    }
+
+    /** @return array{average: float|null, count: int, breakdown: array<int,int>, items: array<int,array<string,mixed>>} */
+    private function reviewSummary(Event $event): array
+    {
+        $visible = $event->reviews()->where('is_visible', true);
+        $counts = (clone $visible)->selectRaw('rating, count(*) as total')->groupBy('rating')->pluck('total', 'rating');
+        $count = (int) $counts->sum();
+
+        return [
+            'average' => $count > 0 ? round((clone $visible)->avg('rating'), 1) : null,
+            'count' => $count,
+            'breakdown' => collect([5, 4, 3, 2, 1])->mapWithKeys(fn ($r) => [$r => (int) ($counts[$r] ?? 0)])->all(),
+            'items' => (clone $visible)->latest()->limit(6)->get()->map(fn ($r) => [
+                'id' => $r->id, 'name' => $r->name, 'rating' => $r->rating, 'body' => $r->body,
+                'at' => $r->created_at->toIso8601String(),
+            ])->all(),
+        ];
     }
 }

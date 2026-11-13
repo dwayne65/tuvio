@@ -27,6 +27,7 @@ class ContributionService
             'user_id' => $user?->id,
             'contributor_name' => $opts['is_anonymous'] ?? false ? null : ($contributor['name'] ?? null),
             'contributor_email' => $contributor['email'] ?? null,
+            'contributor_phone' => $contributor['phone'] ?? null,
             'is_anonymous' => $opts['is_anonymous'] ?? false,
             'message' => $opts['message'] ?? null,
             'amount_minor' => $amountMinor,

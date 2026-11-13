@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 class Contribution extends Model
 {
     protected $fillable = [
-        'reference', 'campaign_id', 'user_id', 'contributor_name', 'contributor_email',
+        'reference', 'campaign_id', 'user_id', 'contributor_name', 'contributor_email', 'contributor_phone',
         'is_anonymous', 'message', 'amount_minor', 'currency', 'commission_minor',
         'status', 'payment_id', 'receipt_number', 'completed_at',
     ];
