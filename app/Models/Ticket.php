@@ -24,9 +24,10 @@ class Ticket extends Model
         ];
     }
 
+    /** Trashed events keep their tickets readable for buyers and the gate. */
     public function event(): BelongsTo
     {
-        return $this->belongsTo(Event::class);
+        return $this->belongsTo(Event::class)->withTrashed();
     }
 
     public function ticketType(): BelongsTo

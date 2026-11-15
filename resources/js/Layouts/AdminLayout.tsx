@@ -4,14 +4,17 @@ import { Logo } from '@/Components/Logo';
 import { cn } from '@/lib/utils';
 import { PageProps } from '@/types';
 import { Link, router, usePage } from '@inertiajs/react';
-import { BarChart3, Bell, Building2, ClipboardCheck, CreditCard, HandCoins, LayoutDashboard, LifeBuoy, LogOut, Menu, Settings, Smartphone, Users, Wallet, X } from 'lucide-react';
+import { BarChart3, Bell, Building2, CalendarDays, ClipboardCheck, CreditCard, HandCoins, LayoutDashboard, LifeBuoy, LogOut, Megaphone, Menu, Settings, Smartphone, Users, Wallet, X } from 'lucide-react';
 import { ReactNode, useState } from 'react';
 
 const nav = [
     { label: 'Overview', href: '/admin', icon: LayoutDashboard },
     { label: 'Approvals', href: '/admin/approvals', icon: ClipboardCheck },
+    { label: 'Events', href: '/admin/events', icon: CalendarDays },
     { label: 'Users', href: '/admin/users', icon: Users },
     { label: 'Organizers', href: '/admin/organizers', icon: Building2 },
+    { label: 'Promoters', href: '/admin/promoters', icon: Megaphone },
+    { label: 'Reports', href: '/admin/reports', icon: BarChart3 },
     { label: 'Earnings', href: '/admin/earnings', icon: HandCoins },
     { label: 'Transactions', href: '/admin/transactions', icon: CreditCard },
     { label: 'USSD', href: '/admin/ussd', icon: Smartphone },

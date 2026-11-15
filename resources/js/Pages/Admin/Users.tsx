@@ -1,4 +1,5 @@
 import { DataTable } from '@/Components/app/DataTable';
+import { RemoveWithPassword } from '@/Components/app/RemoveWithPassword';
 import { Accent, Avatar, EmptyState, Pagination } from '@/Components/app/Kit';
 import { Badge } from '@/Components/ui/Badge';
 import AdminLayout from '@/Layouts/AdminLayout';
@@ -8,7 +9,7 @@ import { Head, router } from '@inertiajs/react';
 import { Search, Users } from 'lucide-react';
 import { useState } from 'react';
 
-type U = { id: number; name: string; email: string; is_admin: boolean; verified: boolean; created_at: string };
+type U = { id: number; name: string; email: string; is_admin: boolean; verified: boolean; created_at: string; can_remove: boolean };
 type Links = { url: string | null; label: string; active: boolean }[];
 
 export default function AdminUsers({ users, filters }: PageProps<{ users: { data: U[]; links: Links }; filters: { q: string } }>) {
@@ -55,6 +56,18 @@ export default function AdminUsers({ users, filters }: PageProps<{ users: { data
                     { header: 'Role', cell: (u) => (u.is_admin ? <Badge tone="brand">Admin</Badge> : <Badge tone="neutral">User</Badge>) },
                     { header: 'Verified', cell: (u) => (u.verified ? <Badge tone="success">Verified</Badge> : <Badge tone="warning">Unverified</Badge>) },
                     { header: 'Joined', align: 'right', cell: (u) => <span className="whitespace-nowrap text-slate-500">{formatDate(u.created_at)}</span> },
+                    {
+                        header: '',
+                        align: 'right',
+                        cell: (u) => (
+                            <RemoveWithPassword
+                                url={`/admin/users/${u.id}`}
+                                label="Remove"
+                                question={`Remove ${u.name}'s account? Their orders stay on record as guest purchases. Enter your password to continue.`}
+                                disabled={!u.can_remove}
+                            />
+                        ),
+                    },
                 ]}
                 mobile={(u) => (
                     <div className="flex items-center gap-3">

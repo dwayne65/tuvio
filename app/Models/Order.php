@@ -32,9 +32,10 @@ class Order extends Model
         ];
     }
 
+    /** Trashed events keep their orders readable so refunds and ledger lookups still resolve. */
     public function event(): BelongsTo
     {
-        return $this->belongsTo(Event::class);
+        return $this->belongsTo(Event::class)->withTrashed();
     }
 
     public function user(): BelongsTo

@@ -26,6 +26,8 @@ use RuntimeException;
 
 class AdminController extends Controller
 {
+    use RecordsAdminAudit;
+
     public function dashboard(): Response
     {
         $gmv = (int) Order::where('status', 'paid')->sum('total_minor');
@@ -66,10 +68,44 @@ class AdminController extends Controller
         return Inertia::render('Admin/Users', [
             'users' => User::query()
                 ->when($request->string('q')->value(), fn ($q, $s) => $q->where('name', 'ilike', "%{$s}%")->orWhere('email', 'ilike', "%{$s}%"))
+                ->withExists('ownedOrganizations')
                 ->latest()->paginate(20)
-                ->through(fn ($u) => ['id' => $u->id, 'name' => $u->name, 'email' => $u->email, 'is_admin' => $u->is_admin, 'verified' => (bool) $u->email_verified_at, 'created_at' => $u->created_at->toIso8601String()]),
+                ->through(fn (User $u) => [
+                    'id' => $u->id,
+                    'name' => $u->name,
+                    'email' => $u->email,
+                    'is_admin' => $u->is_admin,
+                    'verified' => (bool) $u->email_verified_at,
+                    'created_at' => $u->created_at->toIso8601String(),
+                    'can_remove' => ! $u->is_admin && ! $u->is($request->user()) && ! $u->owned_organizations_exists,
+                ]),
             'filters' => ['q' => $request->string('q')->value()],
         ]);
+    }
+
+    /**
+     * Removes a user account. Their orders and tickets stay on record as guest purchases.
+     * Owners of an organization and other admins are refused: their organizations and
+     * admin access have to be handed over or revoked first.
+     */
+    public function destroyUser(Request $request, User $user): RedirectResponse
+    {
+        $request->validate(['password' => ['required', 'current_password']]);
+
+        if ($user->is($request->user())) {
+            return back()->with('error', 'You cannot remove your own account.');
+        }
+        if ($user->isAdmin()) {
+            return back()->with('error', "{$user->name} is a platform admin and cannot be removed here.");
+        }
+        if ($user->ownedOrganizations()->exists()) {
+            return back()->with('error', "{$user->name} owns an organization. Remove or transfer it before removing this account.");
+        }
+
+        $this->recordAdminAction($request, 'admin.user_removed', $user, null, ['name' => $user->name, 'email' => $user->email]);
+        $user->delete();
+
+        return back()->with('success', "{$user->name} was removed.");
     }
 
     public function organizers(): Response
