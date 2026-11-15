@@ -10,7 +10,8 @@ COPY . .
 RUN composer dump-autoload --no-dev --optimize --classmap-authoritative
 
 # --- Frontend assets (Vite) ---
-FROM node:22-bookworm-slim AS assets
+# Same Node major (and npm 11) that wrote package-lock.json; npm 10 resolves peers differently.
+FROM node:24-bookworm-slim AS assets
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
