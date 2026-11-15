@@ -59,7 +59,7 @@ class ContributionController extends Controller
                 $request->user(),
             );
         } catch (\RuntimeException $e) {
-            return back()->with('error', $e->getMessage());
+            return back()->with('error', $this->customerMessage($e));
         }
 
         $intent = $this->payments->initiateForContribution(

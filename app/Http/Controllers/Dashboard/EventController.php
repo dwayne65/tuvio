@@ -158,7 +158,7 @@ class EventController extends Controller
         try {
             $this->events->submitForReview($event);
         } catch (\RuntimeException $e) {
-            return back()->with('error', $e->getMessage());
+            return back()->with('error', $this->customerMessage($e));
         }
 
         rescue(fn () => Notification::send(
@@ -178,7 +178,7 @@ class EventController extends Controller
         try {
             $this->events->setSellOnUssd($event, $enabled);
         } catch (\RuntimeException $e) {
-            return back()->with('error', $e->getMessage());
+            return back()->with('error', $this->customerMessage($e));
         }
 
         return back()->with('success', $enabled ? 'Buyers can now get tickets for this event over USSD.' : 'This event is no longer sold over USSD.');

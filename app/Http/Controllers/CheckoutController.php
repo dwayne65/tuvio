@@ -128,7 +128,7 @@ class CheckoutController extends Controller
             $promo = $this->discounts->resolve($event, $data['code']);
             $this->discounts->amount($promo, $subtotal, $event->currency);
         } catch (RuntimeException $e) {
-            return back()->withErrors(['code' => $e->getMessage()]);
+            return back()->withErrors(['code' => $this->customerMessage($e)]);
         }
 
         $request->session()->put('checkout.promo', $promo->code);
@@ -179,7 +179,7 @@ class CheckoutController extends Controller
                 promoter: $this->referringPromoter($request, $event),
             );
         } catch (RuntimeException $e) {
-            return back()->with('error', $e->getMessage());
+            return back()->with('error', $this->customerMessage($e));
         }
 
         $request->session()->forget('checkout');
@@ -240,7 +240,7 @@ class CheckoutController extends Controller
                     return redirect()->route('checkout.complete', $reference)->with('success', 'Payment confirmed!');
                 }
             } catch (RuntimeException $e) {
-                return redirect()->route('checkout.complete', $reference)->with('error', $e->getMessage());
+                return redirect()->route('checkout.complete', $reference)->with('error', $this->customerMessage($e));
             }
         }
 
@@ -287,7 +287,7 @@ class CheckoutController extends Controller
             try {
                 $this->payments->verifyAndFulfill($order->payments()->latest()->firstOrFail());
             } catch (RuntimeException $e) {
-                return redirect()->route('checkout.complete', $order->reference)->with('error', $e->getMessage());
+                return redirect()->route('checkout.complete', $order->reference)->with('error', $this->customerMessage($e));
             }
 
             return redirect()->route('checkout.complete', $order->reference)->with('success', 'Demo payment confirmed!');
@@ -397,7 +397,7 @@ class CheckoutController extends Controller
         try {
             $ok = $this->payments->verifyAndFulfill($payment);
         } catch (RuntimeException $e) {
-            return redirect()->route('checkout.complete', $reference)->with('error', $e->getMessage());
+            return redirect()->route('checkout.complete', $reference)->with('error', $this->customerMessage($e));
         }
 
         return redirect()->route('checkout.complete', $reference)

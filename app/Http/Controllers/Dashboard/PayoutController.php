@@ -88,7 +88,7 @@ class PayoutController extends Controller
         try {
             $payout = $this->payouts->request($org);
         } catch (\RuntimeException $e) {
-            return back()->with('error', $e->getMessage());
+            return back()->with('error', $this->customerMessage($e));
         }
 
         return back()->with('success', "Payout {$payout->reference} requested for review.");

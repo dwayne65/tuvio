@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Domain\Orders\OrderService;
 use App\Domain\Payments\PaymentService;
+use App\Models\LedgerAccount;
 use App\Models\LedgerTransaction;
 use App\Models\Order;
 use App\Models\Organization;
@@ -112,6 +113,24 @@ class OrderPaymentTest extends TestCase
         $this->assertTrue($txn->isBalanced());
         $this->assertSame(1000000, (int) $txn->entries()->where('direction', 'credit')
             ->whereHas('account', fn ($q) => $q->where('code', 'COMMISSION_INCOME'))->sum('amount_minor'));
+    }
+
+    public function test_payments_to_different_organizers_each_post_to_their_own_payable_account(): void
+    {
+        foreach (['FAKE-A', 'FAKE-B'] as $providerRef) {
+            [$event, $type] = $this->publishedEvent();
+            $order = app(OrderService::class)->create($event, $this->buyer(), [['ticket_type_id' => $type->id, 'quantity' => 1]]);
+            $payment = Payment::create([
+                'reference' => "PAY-{$providerRef}", 'purpose' => 'ticket_order', 'order_id' => $order->id,
+                'provider' => 'fake', 'provider_ref' => $providerRef, 'idempotency_key' => $providerRef,
+                'amount_minor' => $order->total_minor, 'currency' => 'UGX', 'status' => 'pending',
+            ]);
+
+            $this->assertTrue(app(PaymentService::class)->verifyAndFulfill($payment));
+            $this->assertSame('paid', $order->fresh()->status);
+        }
+
+        $this->assertSame(2, LedgerAccount::where('code', 'ORGANIZER_PAYABLE')->distinct()->count('owner_id'));
     }
 
     public function test_buyer_pays_the_fee_on_top_and_organizer_keeps_the_full_price(): void
