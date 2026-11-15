@@ -24,7 +24,25 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-    <title inertia>{{ config('app.name', 'TUVIO') }}</title>
+    @php($seo ??= \App\Support\Seo::forRequest(request()))
+    <title inertia>{{ $seo['title'] }}</title>
+    <meta name="description" content="{{ $seo['description'] }}">
+    <meta name="robots" content="{{ $seo['robots'] }}">
+    <link rel="canonical" href="{{ $seo['url'] }}">
+    <meta property="og:site_name" content="TUVIO">
+    <meta property="og:type" content="{{ $seo['type'] === 'event' ? 'website' : $seo['type'] }}">
+    <meta property="og:title" content="{{ $seo['title'] }}">
+    <meta property="og:description" content="{{ $seo['description'] }}">
+    <meta property="og:url" content="{{ $seo['url'] }}">
+    <meta property="og:image" content="{{ $seo['image'] }}">
+    <meta property="og:locale" content="en_UG">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{ $seo['title'] }}">
+    <meta name="twitter:description" content="{{ $seo['description'] }}">
+    <meta name="twitter:image" content="{{ $seo['image'] }}">
+    @foreach ($seo['jsonLd'] as $schema)
+        <script type="application/ld+json">{!! json_encode($schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) !!}</script>
+    @endforeach
 
     <link rel="icon" href="/brand/favicon-64.png" type="image/png">
     <link rel="apple-touch-icon" href="/brand/apple-touch-icon.png">

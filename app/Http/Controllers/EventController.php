@@ -7,6 +7,7 @@ use App\Models\Event;
 use App\Models\EventCategory;
 use App\Models\Promoter;
 use App\Support\EventPresenter;
+use App\Support\Seo;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -111,7 +112,7 @@ class EventController extends Controller
             ],
             'related' => $related->map(fn ($e) => EventPresenter::summary($e)),
             'reviews' => $this->reviewSummary($event),
-        ]);
+        ])->withViewData(['seo' => Seo::forEvent($event)]);
     }
 
     /** Credit a promoter's ?ref= link for later checkout (per organization, last click wins). */

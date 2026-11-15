@@ -7,6 +7,7 @@ use App\Http\Controllers\EventController;
 use App\Http\Controllers\MediaController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\ReviewController;
+use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\SupportController;
 use App\Http\Controllers\TicketController;
 use App\Http\Controllers\UssdController;
@@ -48,6 +49,9 @@ Route::get('/campaigns/{campaign:slug}', [ContributionController::class, 'show']
 Route::post('/campaigns/{campaign:slug}/contribute', [ContributionController::class, 'contribute'])->name('campaigns.contribute');
 Route::get('/contribute/{reference}/callback', [ContributionController::class, 'callback'])->name('contribute.callback');
 Route::get('/contribute/{reference}/complete', [ContributionController::class, 'complete'])->name('contribute.complete');
+
+// Search engines
+Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
 
 // Static / marketing pages
 Route::get('/categories', [PageController::class, 'categories'])->name('categories');

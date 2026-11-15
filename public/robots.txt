@@ -1,2 +1,11 @@
 User-agent: *
-Disallow:
+Allow: /
+Disallow: /dashboard
+Disallow: /my-account
+Disallow: /admin
+Disallow: /checkout
+Disallow: /tickets/
+Disallow: /internal/
+Disallow: /webhooks/
+
+Sitemap: https://tuvio.org/sitemap.xml
