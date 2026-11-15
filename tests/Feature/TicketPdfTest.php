@@ -11,7 +11,9 @@ use App\Models\Ticket;
 use App\Models\User;
 use Database\Seeders\ChartOfAccountsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Tests\TestCase;
 
@@ -89,6 +91,24 @@ class TicketPdfTest extends TestCase
         $mail->assertSeeInHtml('calendar.google.com', false);
         $mail->assertSeeInHtml('data:image/png;base64,', false);
         $mail->assertSeeInText($ticket->code);
+    }
+
+    public function test_ticket_email_embeds_a_cover_stored_in_the_database(): void
+    {
+        config(['filesystems.disks.public.driver' => 'database', 'mail.default' => 'array']);
+        Storage::forgetDisk('public');
+        $ticket = $this->issuedTicketFor(User::factory()->create());
+        $order = $ticket->order;
+        $coverBytes = UploadedFile::fake()->image('cover.png')->getContent();
+        Storage::disk('public')->put('event-covers/cover.png', $coverBytes);
+        $order->event->update(['cover_image_path' => 'event-covers/cover.png']);
+
+        Mail::to($order->buyer_email)->send(new TicketsIssuedMail($order->fresh(['event', 'tickets.ticketType'])));
+
+        $sent = app('mailer')->getSymfonyTransport()->messages()->last()->getOriginalMessage();
+        $cover = collect($sent->getAttachments())->first(fn ($part) => $part->getFilename() === 'cover.png');
+        $this->assertNotNull($cover);
+        $this->assertSame($coverBytes, $cover->getBody());
     }
 
     public function test_guest_can_download_ticket_with_signed_link(): void

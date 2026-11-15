@@ -60,7 +60,7 @@ class TicketsIssuedMail extends Mailable
                 'time' => $start ? $start->format('g:i A').($event->end_at ? ' – '.$event->end_at->format('g:i A') : '') : null,
                 'countdown' => $this->countdown($start),
                 'firstName' => Str::of((string) $order->buyer_name)->trim()->before(' ')->title()->value() ?: 'there',
-                'coverPath' => $this->localCoverPath($event->cover_image_path),
+                'cover' => $this->coverImage($event->cover_image_path),
                 'tickets' => $order->tickets->map(fn (Ticket $ticket) => [
                     'code' => $ticket->code,
                     'type' => $ticket->ticketType->name,
@@ -124,14 +124,26 @@ class TicketsIssuedMail extends Mailable
         return $this->order->currency.' '.number_format($minor / 100);
     }
 
-    /** Covers on the public disk are embedded; remote covers are skipped so the email never hotlinks. */
-    private function localCoverPath(?string $path): ?string
+    /**
+     * Covers on the public disk are embedded; remote covers are skipped so the email never hotlinks.
+     * The bytes are read through the disk, since uploads may live in the database, not on disk.
+     *
+     * @return array{data: string, name: string, mime: string}|null
+     */
+    private function coverImage(?string $path): ?array
     {
-        if (! $path || str_starts_with($path, 'http') || ! Storage::disk('public')->exists($path)) {
+        if (! $path || str_starts_with($path, 'http')) {
             return null;
         }
 
-        return Storage::disk('public')->path($path);
+        $disk = Storage::disk('public');
+        $data = $disk->get($path);
+
+        if ($data === null) {
+            return null;
+        }
+
+        return ['data' => $data, 'name' => basename($path), 'mime' => $disk->mimeType($path) ?: 'image/jpeg'];
     }
 
     private function paymentLabel(?string $method, ?string $provider): string

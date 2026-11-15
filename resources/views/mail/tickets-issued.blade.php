@@ -4,7 +4,7 @@
         ? $message->embedData($data, $name, 'image/png')
         : 'data:image/png;base64,'.base64_encode($data);
     $logo = isset($message) ? $message->embed(public_path('brand/tuvio-logo-mail.png')) : asset('brand/tuvio-logo-mail.png');
-    $cover = $coverPath ? (isset($message) ? $message->embed($coverPath) : null) : null;
+    $cover = $cover && isset($message) ? $message->embedData($cover['data'], $cover['name'], $cover['mime']) : null;
     $font = 'font-family:Arial,Helvetica,sans-serif;';
     $mono = "font-family:'Courier New',Courier,monospace;";
     $count = count($tickets);
