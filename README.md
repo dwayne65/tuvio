@@ -91,7 +91,6 @@ Default admin after seeding: **admin@ticketflow.test** / `password`.
 | `TICKETFLOW_COMMISSION_BPS` | Platform commission in basis points (500 = 5%) |
 | `TICKETFLOW_CONTRIBUTION_COMMISSION_BPS` | Commission on contributions |
 | `TICKETFLOW_RESERVATION_MINUTES` | Unpaid-order inventory hold |
-| `TICKETFLOW_PAYOUT_SETTLEMENT_DAYS` | Days post-event before payout eligibility |
 | `FLW_PUBLIC_KEY` / `FLW_SECRET_KEY` / `FLW_ENCRYPTION_KEY` / `FLW_WEBHOOK_SECRET` | Flutterwave sandbox |
 
 > **Never** put payment secrets in frontend code. All payment verification is server-side.

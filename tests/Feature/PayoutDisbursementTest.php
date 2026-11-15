@@ -46,7 +46,6 @@ class PayoutDisbursementTest extends TestCase
         config([
             'ticketflow.payments.default' => 'fake',
             'ticketflow.commission_bps' => 500,
-            'ticketflow.payout_settlement_days' => 7,
             'ticketflow.payouts.driver' => 'paytota',
             'ticketflow.payments.paytota' => [
                 'brand_id' => 'brand-123',

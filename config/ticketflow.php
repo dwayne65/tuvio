@@ -30,9 +30,6 @@ return [
     // Leave empty to switch the endpoint off.
     'cron_token' => env('CRON_TOKEN'),
 
-    // Days after an event ends before organizer earnings become eligible for payout.
-    'payout_settlement_days' => (int) env('TICKETFLOW_PAYOUT_SETTLEMENT_DAYS', 7),
-
     // How approved organizer payouts leave the platform. "paytota" sends Mobile Money
     // payouts through the Paytota disbursement API; "manual" means an admin pays them
     // outside TUVIO (and bank payouts are always manual) and records the reference.

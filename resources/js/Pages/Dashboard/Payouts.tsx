@@ -49,7 +49,7 @@ export default function Payouts({ available_minor, currency, has_open_payout, ac
                             <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-white/60">Available for payout</p>
                             <p className="mt-2 text-[2.4rem] font-extrabold leading-none tracking-[-0.04em] sm:text-5xl">{money(available_minor, currency)}</p>
                             <p className="mt-3 max-w-md text-sm text-white/70">
-                                {app.demo_mode ? 'Demo mode: successful checkout funds are available immediately.' : 'Funds become available after an event ends and its settlement window passes.'}
+                                Money from each sale is available to cash out as soon as the payment is confirmed.
                             </p>
                             <Button
                                 className="mt-6 bg-white text-[#0b0d12] hover:bg-white/90"

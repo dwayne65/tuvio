@@ -7,7 +7,6 @@ use App\Domain\Ledger\LedgerService;
 use App\Domain\Orders\OrderService;
 use App\Domain\Payments\PaymentService;
 use App\Domain\Payouts\PayoutService;
-use App\Models\Event;
 use App\Models\LedgerTransaction;
 use App\Models\Order;
 use App\Models\Organization;
@@ -29,7 +28,7 @@ class ContributionPayoutTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        config(['ticketflow.payments.default' => 'fake', 'ticketflow.commission_bps' => 500, 'ticketflow.contribution_commission_bps' => 300, 'ticketflow.payout_settlement_days' => 7]);
+        config(['ticketflow.payments.default' => 'fake', 'ticketflow.commission_bps' => 500, 'ticketflow.contribution_commission_bps' => 300]);
         $this->seed(ChartOfAccountsSeeder::class);
         $this->owner = User::factory()->create();
         $this->org = Organization::create(['owner_id' => $this->owner->id, 'name' => 'Acme', 'slug' => 'acme', 'default_currency' => 'UGX', 'status' => 'active']);
@@ -69,16 +68,17 @@ class ContributionPayoutTest extends TestCase
         $this->assertTrue($txn->isBalanced());
     }
 
-    public function test_funds_not_eligible_before_settlement(): void
+    public function test_a_sale_can_be_cashed_out_as_soon_as_it_is_paid_even_before_the_event(): void
     {
-        // Event in the future → not settled.
         $event = $this->org->events()->create(['title' => 'Future', 'slug' => 'fut', 'status' => 'published', 'type' => 'physical', 'visibility' => 'public', 'start_at' => now()->addDays(10), 'currency' => 'UGX']);
         $type = $event->ticketTypes()->create(['name' => 'R', 'kind' => 'paid', 'price_minor' => 10000000, 'currency' => 'UGX', 'quantity_total' => 50, 'max_per_order' => 5, 'status' => 'active']);
         $order = app(OrderService::class)->create($event, ['name' => 'B', 'email' => 'b@e.com'], [['ticket_type_id' => $type->id, 'quantity' => 1]]);
         $payment = Payment::create(['reference' => 'P'.uniqid(), 'purpose' => 'ticket_order', 'order_id' => $order->id, 'provider' => 'fake', 'provider_ref' => 'R'.uniqid(), 'idempotency_key' => uniqid(), 'amount_minor' => $order->total_minor, 'currency' => 'UGX', 'status' => 'pending']);
+        $this->assertSame(0, app(PayoutService::class)->availableMinor($this->org));
+
         app(PaymentService::class)->verifyAndFulfill($payment);
 
-        $this->assertSame(0, app(PayoutService::class)->availableMinor($this->org));
+        $this->assertSame(9500000, app(PayoutService::class)->availableMinor($this->org));
     }
 
     public function test_demo_payout_settles_a_future_event_immediately(): void

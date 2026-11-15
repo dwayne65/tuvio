@@ -18,9 +18,9 @@ use Illuminate\Support\Str;
 use RuntimeException;
 
 /**
- * Computes settlement-eligible organizer earnings and processes payouts. Funds
- * become eligible only after the event has ended + the settlement window, and
- * each order/contribution can be paid out exactly once (DB-unique in payout_items).
+ * Computes payout-eligible organizer earnings and processes payouts. Money is
+ * eligible as soon as the buyer's payment is confirmed (no waiting for the event),
+ * and each order/contribution can be paid out exactly once (DB-unique in payout_items).
  *
  * Lifecycle: requested -> processing (sent to Paytota) -> paid | failed, or
  * requested -> cancelled by an admin. A failed or cancelled payout releases its
@@ -52,15 +52,12 @@ class PayoutService
             && config('ticketflow.payments.default') === 'fake';
     }
 
-    /** Paid orders whose event settled and that are not yet in any payout. */
+    /** Paid orders that are not yet in any payout, whenever their event takes place. */
     public function eligibleOrders(Organization $org): Collection
     {
-        $cutoff = now()->subDays(config('ticketflow.payout_settlement_days'));
-
         return Order::query()
             ->where('status', 'paid')
-            ->whereHas('event', fn ($q) => $q->where('organization_id', $org->id)
-                ->when(! $this->demoMode(), fn ($q) => $q->where('start_at', '<=', $cutoff)))
+            ->whereHas('event', fn ($q) => $q->where('organization_id', $org->id))
             ->whereDoesntHave('payoutItem')
             ->get();
     }
