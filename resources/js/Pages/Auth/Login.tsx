@@ -23,10 +23,10 @@ export default function Login({ canResetPassword, status, email = '' }: { canRes
 
             <form onSubmit={submit} className="space-y-4">
                 <Field label="Email" error={errors.email}>
-                    <Input type="email" value={data.email} onChange={(e) => setData('email', e.target.value)} autoComplete="username" required autoFocus />
+                    <Input type="email" value={data.email} onChange={(e) => setData('email', e.target.value)} autoComplete="username" required autoFocus={!email} />
                 </Field>
                 <Field label="Password" error={errors.password}>
-                    <Input type="password" value={data.password} onChange={(e) => setData('password', e.target.value)} autoComplete="current-password" required />
+                    <Input type="password" value={data.password} onChange={(e) => setData('password', e.target.value)} autoComplete="current-password" required autoFocus={!!email} />
                 </Field>
 
                 <div className="flex items-center justify-between">

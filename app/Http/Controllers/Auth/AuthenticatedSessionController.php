@@ -35,7 +35,8 @@ class AuthenticatedSessionController extends Controller
         return Inertia::render('Auth/Login', [
             'canResetPassword' => true,
             'status' => session('status'),
-            'email' => $request->string('email')->limit(255, '')->toString(),
+            // A link's ?email= wins; otherwise offer the last email that signed in on this device.
+            'email' => Str::limit($request->string('email')->toString() ?: (string) $request->cookie(PendingLogin::REMEMBERED_EMAIL_COOKIE), 255, ''),
         ]);
     }
 

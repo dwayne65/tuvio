@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Domain\Auth\PendingLogin;
 use App\Domain\Auth\TwoFactorAuthenticator;
 use App\Mail\LoginCodeMail;
 use App\Models\Organization;
@@ -56,10 +57,14 @@ class EmailLoginCodeTest extends TestCase
     {
         $user = $this->memberOfPlan('professional');
 
-        $this->post('/login', ['email' => $user->email, 'password' => 'Password123!'])->assertRedirect(route('login.email-code'));
+        $this->post('/login', ['email' => $user->email, 'password' => 'Password123!'])
+            ->assertRedirect(route('login.email-code'))
+            ->assertCookieMissing(PendingLogin::REMEMBERED_EMAIL_COOKIE);
         $this->assertGuest();
 
-        $this->post('/login/email-code', ['code' => $this->sentCode($user)])->assertRedirect(route('dashboard'));
+        $this->post('/login/email-code', ['code' => $this->sentCode($user)])
+            ->assertRedirect(route('dashboard'))
+            ->assertCookie(PendingLogin::REMEMBERED_EMAIL_COOKIE, $user->email);
         $this->assertAuthenticatedAs($user);
     }
 

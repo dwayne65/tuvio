@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cookie;
 
 /**
  * A sign-in that passed the password check but still owes extra steps: an emailed
@@ -20,6 +21,11 @@ class PendingLogin
     private const MINUTES_WITH_EMAIL_CODE = 15;
 
     public const SECOND_STEP_KEY = 'auth.second_step_at';
+
+    /** Encrypted cookie holding the last email that signed in on this device, to prefill the login form. */
+    public const REMEMBERED_EMAIL_COOKIE = 'last_login_email';
+
+    private const REMEMBERED_EMAIL_MINUTES = 60 * 24 * 365;
 
     private const KEYS = [
         'login.id', 'login.remember', 'login.expires_at',
@@ -77,6 +83,7 @@ class PendingLogin
             $request->session()->put(self::SECOND_STEP_KEY, now()->getTimestamp());
         }
         $user->forceFill(['last_login_at' => now()])->save();
+        Cookie::queue(self::REMEMBERED_EMAIL_COOKIE, $user->email, self::REMEMBERED_EMAIL_MINUTES);
 
         return self::redirectAfterSignIn($request, $user);
     }

@@ -2,10 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Domain\Auth\PendingLogin;
 use App\Enums\OrganizationRole;
 use App\Models\Organization;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class AuthFlowTest extends TestCase
@@ -64,6 +66,34 @@ class AuthFlowTest extends TestCase
         $this->post('/login', ['email' => $user->email, 'password' => 'Password123!'])
             ->assertRedirect('/dashboard');
         $this->assertAuthenticatedAs($user);
+    }
+
+    public function test_login_form_remembers_the_last_email_that_signed_in(): void
+    {
+        $user = User::factory()->create(['password' => bcrypt('Password123!')]);
+
+        $this->post('/login', ['email' => $user->email, 'password' => 'Password123!'])
+            ->assertCookie(PendingLogin::REMEMBERED_EMAIL_COOKIE, $user->email);
+        $this->post('/logout');
+
+        $this->withCookie(PendingLogin::REMEMBERED_EMAIL_COOKIE, $user->email)
+            ->get('/login')
+            ->assertInertia(fn (Assert $page) => $page->component('Auth/Login', false)->where('email', $user->email));
+    }
+
+    public function test_a_wrong_password_does_not_remember_the_email(): void
+    {
+        $user = User::factory()->create(['password' => bcrypt('Password123!')]);
+
+        $this->post('/login', ['email' => $user->email, 'password' => 'wrong'])
+            ->assertCookieMissing(PendingLogin::REMEMBERED_EMAIL_COOKIE);
+    }
+
+    public function test_an_email_link_overrides_the_remembered_email(): void
+    {
+        $this->withCookie(PendingLogin::REMEMBERED_EMAIL_COOKIE, 'old@example.com')
+            ->get('/login?email=new@example.com')
+            ->assertInertia(fn (Assert $page) => $page->where('email', 'new@example.com'));
     }
 
     public function test_user_can_become_organizer(): void
