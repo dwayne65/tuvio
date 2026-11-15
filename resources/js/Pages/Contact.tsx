@@ -2,9 +2,16 @@ import { Button } from '@/Components/ui/Button';
 import { Field, Input, Textarea } from '@/Components/ui/Input';
 import PublicLayout from '@/Layouts/PublicLayout';
 import { PageProps } from '@/types';
-import { Head, useForm } from '@inertiajs/react';
-import { Clock, LifeBuoy, Mail, MapPin, Phone, Send } from 'lucide-react';
+import { Head, Link, useForm } from '@inertiajs/react';
+import { ArrowUpRight, Clock, LifeBuoy, Mail, MapPin, MessageCircle, Phone, Send } from 'lucide-react';
 import { FormEvent, ReactNode } from 'react';
+
+/** TUVIO's public contact details. */
+const CONTACT = {
+    email: 'dicksonfx4@gmail.com',
+    phoneDisplay: '+256 761 664 422',
+    phone: '+256761664422',
+};
 
 const topics = ['I didn’t receive my tickets', 'Change or refund a ticket', 'Payment problem', 'Question about an event', 'Something else'];
 
@@ -34,11 +41,24 @@ export default function Contact({ prefill }: PageProps<{ prefill: { name: string
                         Add your order reference and your message goes straight to the event organizer. Everything else reaches the TUVIO team.
                     </p>
                     <div className="mt-8 space-y-3">
-                        <ContactRow icon={<Mail className="h-5 w-5" />} label="Email" value="support@tuvio.app" />
-                        <ContactRow icon={<Phone className="h-5 w-5" />} label="Phone" value="+256 700 000 000" />
+                        <ContactRow icon={<Mail className="h-5 w-5" />} label="Email us" value={CONTACT.email} href={`mailto:${CONTACT.email}`} />
+                        <ContactRow icon={<Phone className="h-5 w-5" />} label="Call us" value={CONTACT.phoneDisplay} href={`tel:${CONTACT.phone}`} />
+                        <ContactRow
+                            icon={<MessageCircle className="h-5 w-5" />}
+                            label="WhatsApp"
+                            value={`Chat on ${CONTACT.phoneDisplay}`}
+                            href={`https://wa.me/${CONTACT.phone.slice(1)}`}
+                        />
                         <ContactRow icon={<MapPin className="h-5 w-5" />} label="Office" value="Kampala, Uganda" />
                         <ContactRow icon={<Clock className="h-5 w-5" />} label="Replies" value="Usually within a few hours" />
                     </div>
+                    <p className="mt-6 rounded-2xl border border-brand-500/20 bg-brand-500/[0.06] p-4 text-sm text-slate-500">
+                        <span className="font-bold text-ink">TUVIO accounts are free.</span>{' '}
+                        <Link href="/register" className="font-semibold text-brand-300 hover:underline">
+                            Sign up in seconds
+                        </Link>{' '}
+                        to keep your tickets in one wallet, or to start selling tickets for your own events.
+                    </p>
                 </div>
 
                 <form onSubmit={submit} className="space-y-4 rounded-[1.75rem] border border-tint/[0.08] bg-card/80 p-5 shadow-premium sm:p-7">
@@ -91,14 +111,33 @@ export default function Contact({ prefill }: PageProps<{ prefill: { name: string
     );
 }
 
-function ContactRow({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
-    return (
-        <div className="flex items-center gap-3 rounded-2xl border border-tint/[0.06] bg-card/60 p-3">
-            <span className="grid h-10 w-10 place-items-center rounded-full bg-brand-500/10 text-brand-300">{icon}</span>
-            <div>
+function ContactRow({ icon, label, value, href }: { icon: ReactNode; label: string; value: string; href?: string }) {
+    const content = (
+        <>
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-brand-500/10 text-brand-300">{icon}</span>
+            <div className="min-w-0 flex-1">
                 <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">{label}</p>
-                <p className="font-semibold text-ink">{value}</p>
+                <p className="truncate font-semibold text-ink">{value}</p>
             </div>
-        </div>
+            {href && <ArrowUpRight className="h-4 w-4 shrink-0 text-slate-400 transition-colors group-hover:text-brand-300" />}
+        </>
+    );
+    const className = 'flex items-center gap-3 rounded-2xl border border-tint/[0.06] bg-card/60 p-3';
+
+    if (!href) {
+        return <div className={className}>{content}</div>;
+    }
+
+    const external = href.startsWith('http');
+
+    return (
+        <a
+            href={href}
+            target={external ? '_blank' : undefined}
+            rel={external ? 'noopener noreferrer' : undefined}
+            className={`group ${className} transition-colors hover:border-brand-500/40 hover:bg-card`}
+        >
+            {content}
+        </a>
     );
 }
