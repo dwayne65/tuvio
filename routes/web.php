@@ -171,7 +171,7 @@ Route::middleware('auth')->group(function () {
         Route::post('payouts/accounts', [PayoutController::class, 'storeAccount'])->name('payouts.accounts.store');
         Route::post('payouts/accounts/{account}/default', [PayoutController::class, 'makeDefault'])->name('payouts.accounts.default');
         Route::delete('payouts/accounts/{account}', [PayoutController::class, 'destroyAccount'])->name('payouts.accounts.destroy');
-        Route::post('payouts/request', [PayoutController::class, 'request'])->name('payouts.request');
+        Route::post('payouts/request', [PayoutController::class, 'request'])->middleware('throttle:5,1')->name('payouts.request');
     });
 
     // Admin area

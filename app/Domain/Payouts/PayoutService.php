@@ -122,6 +122,26 @@ class PayoutService
     }
 
     /**
+     * Sends a just-requested payout without waiting for an admin, when it can go out
+     * automatically. A refused or unconfirmed send is reported and left for the admin
+     * payouts page (retry, or the callback / status check), never thrown at the organizer.
+     */
+    public function sendAutomatically(Payout $payout): Payout
+    {
+        if ($payout->status !== 'requested' || ! $this->canSendAutomatically($payout)) {
+            return $payout;
+        }
+
+        try {
+            return $this->send($payout);
+        } catch (RuntimeException $e) {
+            report($e);
+
+            return $payout->fresh();
+        }
+    }
+
+    /**
      * Settles a payout: posts the ledger (debit organizer payable, credit cash) and tells
      * the organizer. The row lock makes a callback and a status check racing each other
      * settle it once.
@@ -161,13 +181,14 @@ class PayoutService
     }
 
     /**
-     * Sends an approved Mobile Money payout through Paytota. The payout is claimed with
-     * a conditional update first, so a double click or two admins can never send twice.
+     * Sends a Mobile Money payout through Paytota, either straight after the organizer's
+     * request ($adminId null) or when an admin retries one. The payout is claimed with a
+     * conditional update first, so a double click or two admins can never send twice.
      *
      * @throws PayoutRejected when Paytota refused it; the payout is back in "requested".
      * @throws RuntimeException when it cannot be sent, or the outcome is not yet known.
      */
-    public function send(Payout $payout, int $adminId): Payout
+    public function send(Payout $payout, ?int $adminId = null): Payout
     {
         $account = $payout->payoutAccount;
 

@@ -30,6 +30,17 @@ export default function Payouts({ available_minor, currency, has_open_payout, ac
     const acc = useForm({ type: 'mobile_money', provider: 'MTN', label: '', account_name: '', account_number: '', bank_code: '' });
     const isBank = acc.data.type === 'bank';
     const canRequest = available_minor > 0 && accounts.length > 0;
+    const [confirming, setConfirming] = useState(false);
+    const cashOut = useForm({ password: '' });
+
+    function requestPayout(e: FormEvent) {
+        e.preventDefault();
+        cashOut.post('/dashboard/payouts/request', {
+            preserveScroll: true,
+            onSuccess: () => setConfirming(false),
+            onFinish: () => cashOut.reset('password'),
+        });
+    }
 
     function addAccount(e: FormEvent) {
         e.preventDefault();
@@ -51,18 +62,44 @@ export default function Payouts({ available_minor, currency, has_open_payout, ac
                             <p className="mt-3 max-w-md text-sm text-white/70">
                                 Money from each sale is available to cash out as soon as the payment is confirmed.
                             </p>
-                            <Button
-                                className="mt-6 bg-white text-[#0b0d12] hover:bg-white/90"
-                                variant="secondary"
-                                disabled={!canRequest}
-                                onClick={() => router.post('/dashboard/payouts/request', {}, { preserveScroll: true })}
-                            >
-                                Request payout <ArrowUpRight className="h-4 w-4" />
-                            </Button>
+                            {confirming ? (
+                                <form onSubmit={requestPayout} className="mt-6 max-w-sm space-y-3">
+                                    <label className="block text-sm font-medium text-white/80" htmlFor="payout-password">
+                                        Enter your password to send {money(available_minor, currency)}
+                                    </label>
+                                    <Input
+                                        id="payout-password"
+                                        type="password"
+                                        value={cashOut.data.password}
+                                        onChange={(e) => cashOut.setData('password', e.target.value)}
+                                        autoComplete="current-password"
+                                        required
+                                        autoFocus
+                                    />
+                                    {cashOut.errors.password && <p className="text-sm text-rose-300">{cashOut.errors.password}</p>}
+                                    <div className="flex gap-2">
+                                        <Button type="submit" className="bg-white text-[#0b0d12] hover:bg-white/90" variant="secondary" disabled={cashOut.processing}>
+                                            {cashOut.processing ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowUpRight className="h-4 w-4" />} Send payout
+                                        </Button>
+                                        <Button type="button" variant="ghost" className="text-white hover:bg-white/10" onClick={() => { setConfirming(false); cashOut.reset(); cashOut.clearErrors(); }}>
+                                            Cancel
+                                        </Button>
+                                    </div>
+                                </form>
+                            ) : (
+                                <Button
+                                    className="mt-6 bg-white text-[#0b0d12] hover:bg-white/90"
+                                    variant="secondary"
+                                    disabled={!canRequest}
+                                    onClick={() => setConfirming(true)}
+                                >
+                                    Request payout <ArrowUpRight className="h-4 w-4" />
+                                </Button>
+                            )}
                             {accounts.length === 0 && <p className="mt-3 text-sm text-amber-300">Add a payout account first.</p>}
                             {has_open_payout && (
                                 <p className="mt-3 flex items-center gap-2 text-sm text-white/70">
-                                    <Loader2 className="h-4 w-4 animate-spin" /> A payout is on its way. Mobile Money usually lands within minutes of approval.
+                                    <Loader2 className="h-4 w-4 animate-spin" /> A payout is on its way. Mobile Money usually arrives within minutes.
                                 </p>
                             )}
                         </div>

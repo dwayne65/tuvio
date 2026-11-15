@@ -67,6 +67,14 @@ class PayoutDisbursementTest extends TestCase
     /** A payout request for one settled 100,000 UGX sale (95,000 UGX organizer net). */
     private function requestedPayout(string $type = 'mobile_money'): Payout
     {
+        $this->paidSaleWithPayoutAccount($type);
+
+        return app(PayoutService::class)->request($this->org);
+    }
+
+    /** One paid 100,000 UGX sale (95,000 UGX organizer net) and a default payout account. */
+    private function paidSaleWithPayoutAccount(string $type = 'mobile_money'): void
+    {
         $event = $this->org->events()->create([
             'title' => 'Past Event', 'slug' => 'past-'.uniqid(), 'status' => 'published',
             'type' => 'physical', 'visibility' => 'public', 'start_at' => now()->subDays(10), 'currency' => 'UGX',
@@ -80,8 +88,11 @@ class PayoutDisbursementTest extends TestCase
             'type' => $type, 'provider' => $type === 'bank' ? 'Stanbic' : 'MTN', 'account_name' => 'Jane Acme',
             'account_number' => $type === 'bank' ? '9030012345678' : '256772123456', 'currency' => 'UGX', 'is_default' => true,
         ]);
+    }
 
-        return app(PayoutService::class)->request($this->org);
+    private function organizerRequestsPayout(string $password = 'password')
+    {
+        return $this->actingAs($this->owner)->post('/dashboard/payouts/request', ['password' => $password]);
     }
 
     private function fakePaytota(array $execute = ['status' => 'pending', 'details' => ['return_code' => '200']], int $executeStatus = 200): void
@@ -127,6 +138,54 @@ class PayoutDisbursementTest extends TestCase
             && $request['payment'] === ['currency' => 'UGX', 'amount' => '95000', 'description' => "TUVIO payout {$payout->reference} to Acme"]
             && str_starts_with($request['reference'], $payout->reference.'-'));
         Http::assertSent(fn (Request $request) => $request->url() === self::EXECUTE && $request['payout_type'] === 'mobile');
+    }
+
+    public function test_an_organizer_request_sends_mobile_money_without_an_admin(): void
+    {
+        $this->fakePaytota();
+        $this->paidSaleWithPayoutAccount();
+
+        $this->organizerRequestsPayout()->assertSessionHas('success');
+
+        $payout = Payout::sole();
+        $this->assertSame('processing', $payout->status);
+        $this->assertSame('po_1', $payout->provider_ref);
+        $this->assertNull($payout->approved_by);
+        Http::assertSent(fn (Request $request) => $request->url() === self::EXECUTE);
+    }
+
+    public function test_an_organizer_payout_request_needs_their_password(): void
+    {
+        $this->fakePaytota();
+        $this->paidSaleWithPayoutAccount();
+
+        $this->organizerRequestsPayout('wrong-password')->assertSessionHasErrors('password');
+
+        $this->assertSame(0, Payout::count());
+        Http::assertNothingSent();
+    }
+
+    public function test_a_refused_automatic_payout_waits_for_an_admin_to_retry(): void
+    {
+        $this->fakePaytota(['status' => 'error', 'error' => ['code' => 'insufficient_funds', 'message' => 'Insufficient funds to proceed with operation.']], 400);
+        $this->paidSaleWithPayoutAccount();
+
+        $this->organizerRequestsPayout()->assertSessionHas('success');
+
+        $payout = Payout::sole();
+        $this->assertSame('requested', $payout->status);
+        $this->assertSame('Insufficient funds to proceed with operation.', $payout->notes);
+    }
+
+    public function test_a_bank_payout_request_is_left_for_an_admin(): void
+    {
+        $this->fakePaytota();
+        $this->paidSaleWithPayoutAccount('bank');
+
+        $this->organizerRequestsPayout()->assertSessionHas('success');
+
+        $this->assertSame('requested', Payout::sole()->status);
+        Http::assertNothingSent();
     }
 
     public function test_success_callback_settles_the_payout_once(): void

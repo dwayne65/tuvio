@@ -85,13 +85,21 @@ class PayoutController extends Controller
             return back()->with('error', 'Add a payout account before requesting a payout.');
         }
 
+        // Payouts leave without an admin now, so moving money out needs the password again.
+        $request->validate(['password' => ['required', 'current_password']]);
+
         try {
-            $payout = $this->payouts->request($org);
+            $payout = $this->payouts->sendAutomatically($this->payouts->request($org));
         } catch (\RuntimeException $e) {
             return back()->with('error', $this->customerMessage($e));
         }
 
-        return back()->with('success', "Payout {$payout->reference} requested for review.");
+        return match ($payout->status) {
+            'paid' => back()->with('success', "Payout {$payout->reference} has been paid."),
+            'processing' => back()->with('success', "Payout {$payout->reference} is on its way to your Mobile Money. It usually arrives within minutes."),
+            'failed' => back()->with('error', "Payout {$payout->reference} was declined: {$payout->notes} The money is available to request again."),
+            default => back()->with('success', "Payout {$payout->reference} requested. Our team will send it shortly."),
+        };
     }
 
     public function makeDefault(Request $request, OrganizationPayoutAccount $account): RedirectResponse
