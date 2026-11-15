@@ -4,6 +4,7 @@ use App\Http\Controllers\AccountController;
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\ApprovalController;
 use App\Http\Controllers\Admin\EarningsController;
+use App\Http\Controllers\Admin\UssdController as AdminUssdController;
 use App\Http\Controllers\Dashboard\CampaignController;
 use App\Http\Controllers\Dashboard\CheckInController;
 use App\Http\Controllers\Dashboard\CheckInDashboardController;
@@ -178,6 +179,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [AdminController::class, 'dashboard'])->name('dashboard');
         Route::get('approvals', [ApprovalController::class, 'index'])->name('approvals');
         Route::get('earnings', [EarningsController::class, 'index'])->name('earnings');
+        Route::get('ussd', [AdminUssdController::class, 'index'])->name('ussd');
         Route::post('earnings/withdraw', [EarningsController::class, 'withdraw'])->middleware('throttle:10,1')->name('earnings.withdraw');
         Route::post('organizations/{organization}/approve', [ApprovalController::class, 'approveOrganization'])->name('organizations.approve');
         Route::post('organizations/{organization}/reject', [ApprovalController::class, 'rejectOrganization'])->name('organizations.reject');

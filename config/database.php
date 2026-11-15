@@ -34,12 +34,15 @@ return [
 
         'sqlite' => [
             'driver' => 'sqlite',
-            'url' => env('DB_URL'),
+            // Separate from DB_URL so the app can use Postgres (DB_URL) while sessions,
+            // cache and the queue stay in the local SQLite file.
+            'url' => env('DB_SQLITE_URL'),
             'database' => env('DB_DATABASE', database_path('database.sqlite')),
             'prefix' => '',
             'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
             'busy_timeout' => null,
-            'journal_mode' => null,
+            // "wal" lets the web server read sessions while the queue worker writes jobs.
+            'journal_mode' => env('DB_SQLITE_JOURNAL_MODE'),
             'synchronous' => null,
             'transaction_mode' => 'DEFERRED',
         ],
@@ -97,6 +100,14 @@ return [
             'prefix_indexes' => true,
             'search_path' => 'public',
             'sslmode' => env('DB_SSLMODE', 'prefer'),
+            // Reusing connections between requests skips the TLS and login handshake,
+            // which costs seconds per page against a distant database such as Neon.
+            // Emulated prepares send each query in one round trip instead of two (prepare,
+            // then execute); Laravel binds booleans as 'true'/'false' when this is on.
+            'options' => array_filter([
+                PDO::ATTR_PERSISTENT => (bool) env('DB_PERSISTENT', false),
+                PDO::ATTR_EMULATE_PREPARES => (bool) env('DB_EMULATE_PREPARES', false),
+            ]),
         ],
 
         'sqlsrv' => [

@@ -1,0 +1,6 @@
+# Forwards tuvio.org/webhooks/* to the Laravel app through the app.tuvio.org tunnel.
+# Deploy from this folder with: npx wrangler deploy
+name = "tuvio-webhook-proxy"
+main = "worker.js"
+compatibility_date = "2026-11-01"
+routes = [{ pattern = "tuvio.org/webhooks/*", zone_name = "tuvio.org" }]

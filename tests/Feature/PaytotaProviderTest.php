@@ -162,6 +162,37 @@ class PaytotaProviderTest extends TestCase
         $this->assertSame(2, $order->fresh()->tickets()->count());
     }
 
+    public function test_paid_purchase_without_an_amount_is_refused(): void
+    {
+        Http::preventStrayRequests();
+        $order = $this->order();
+        $payment = Payment::create([
+            'reference' => 'PAY-PT4', 'purpose' => 'ticket_order', 'order_id' => $order->id,
+            'provider' => 'paytota', 'provider_ref' => 'pur_4', 'idempotency_key' => 'k4',
+            'amount_minor' => $order->total_minor, 'currency' => 'UGX', 'status' => 'pending',
+        ]);
+        Http::fake([self::BASE.'purchases/pur_4/' => Http::response(['status' => 'paid', 'purchase' => ['currency' => 'UGX']])]);
+
+        try {
+            app(PaymentService::class)->verifyAndFulfill($payment);
+            $this->fail('A paid purchase with no amount must not be fulfilled.');
+        } catch (RuntimeException $e) {
+            $this->assertSame('Payment amount or currency mismatch; refusing to fulfil.', $e->getMessage());
+        }
+
+        $this->assertSame('failed', $payment->fresh()->status);
+        $this->assertSame(0, $order->fresh()->tickets()->count());
+    }
+
+    public function test_fake_provider_is_refused_in_production(): void
+    {
+        $this->app->detectEnvironment(fn () => 'production');
+
+        $this->expectException(\InvalidArgumentException::class);
+
+        app(PaymentManager::class)->provider('fake');
+    }
+
     public function test_paid_purchase_in_another_currency_is_refused(): void
     {
         Http::preventStrayRequests();

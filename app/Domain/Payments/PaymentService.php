@@ -130,7 +130,11 @@ class PaymentService
             return false;
         }
 
-        if ($result->amountMinor > 0 && ($result->amountMinor !== $payment->amount_minor || $result->currency !== $payment->currency)) {
+        // Only the local fake provider is allowed to skip the amount check; a real provider
+        // reporting "paid" without the amount is treated as a mismatch, never as a free pass.
+        $skipsAmountCheck = $payment->provider === 'fake';
+
+        if (! $skipsAmountCheck && ($result->amountMinor !== $payment->amount_minor || $result->currency !== $payment->currency)) {
             $payment->update(['status' => 'failed', 'failed_at' => now(), 'provider_payload' => $result->raw]);
             throw new RuntimeException('Payment amount or currency mismatch; refusing to fulfil.');
         }

@@ -1,0 +1,34 @@
+# Secrets and local state never go into the image.
+.env
+.env.*
+!.env.example
+.neon
+database/*.sqlite
+database/*.sqlite-*
+storage/backups
+storage/logs/*
+storage/framework/cache/data/*
+storage/framework/sessions/*
+storage/framework/views/*
+storage/app/public/*
+bootstrap/cache/*.php
+
+# Rebuilt inside the image.
+node_modules
+vendor
+public/build
+public/hot
+public/hot-ticketflow
+public/storage
+bootstrap/ssr
+
+# Not needed to run the app.
+.git
+.claude
+.ai
+tests
+cloudflare
+mobile
+android
+ios
+*.log

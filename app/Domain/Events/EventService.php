@@ -135,7 +135,20 @@ class EventService
 
         $event->update(['sell_on_ussd' => $enabled]);
 
+        if ($enabled && ! $event->ussd_code) {
+            $this->assignUssdCode($event);
+        }
+
         return $event->fresh();
+    }
+
+    /**
+     * Give the event the next unused dial-in code. Codes start at two digits and are
+     * never reused; the unique index stops two events from ever sharing one.
+     */
+    private function assignUssdCode(Event $event): void
+    {
+        $event->forceFill(['ussd_code' => max(10, (int) Event::withTrashed()->max('ussd_code') + 1)])->save();
     }
 
     public function unpublish(Event $event): Event
@@ -156,7 +169,7 @@ class EventService
     public function duplicate(Event $event): Event
     {
         return DB::transaction(function () use ($event) {
-            $copy = $event->replicate(['slug', 'status', 'published_at', 'views_count']);
+            $copy = $event->replicate(['slug', 'status', 'published_at', 'views_count', 'sell_on_ussd', 'ussd_code']);
             $copy->title = $event->title.' (Copy)';
             $copy->slug = $this->uniqueSlug($copy->title);
             $copy->status = 'draft';

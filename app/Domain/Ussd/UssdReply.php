@@ -28,6 +28,22 @@ final class UssdReply
      */
     private static function plain(string $message): string
     {
-        return collect(explode("\n", $message))->map(fn (string $line) => Str::ascii($line))->implode("\n");
+        $message = collect(explode("\n", $message))->map(fn (string $line) => Str::ascii($line))->implode("\n");
+
+        return self::fit($message, (int) config('ticketflow.ussd.max_screen_length', 182));
+    }
+
+    /**
+     * Telcos drop or cut screens over their length limit. Drop whole lines from the middle
+     * so the heading and the closing options (Back, Cancel) stay readable.
+     */
+    private static function fit(string $message, int $limit): string
+    {
+        $lines = explode("\n", $message);
+        while (strlen(implode("\n", $lines)) > $limit && count($lines) > 2) {
+            array_splice($lines, count($lines) - 2, 1);
+        }
+
+        return substr(implode("\n", $lines), 0, $limit);
     }
 }

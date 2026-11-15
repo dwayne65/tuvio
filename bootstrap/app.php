@@ -33,6 +33,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // Provider webhooks are authenticated by signature, not CSRF token.
         $middleware->validateCsrfTokens(except: [
             'webhooks/*',
+            'internal/cron',
         ]);
 
         // Honour X-Forwarded-* from tunnels / load balancers (HTTPS + host).

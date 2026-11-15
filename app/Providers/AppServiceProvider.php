@@ -5,10 +5,18 @@ namespace App\Providers;
 use App\Domain\Sms\AfricasTalkingSmsSender;
 use App\Domain\Sms\LogSmsSender;
 use App\Domain\Sms\SmsSender;
+use App\Http\Controllers\HomeController;
+use App\Models\Event as EventModel;
+use App\Models\EventCategory;
+use App\Models\TicketType;
+use App\Support\ResilientPostgresConnector;
+use Illuminate\Database\Events\ConnectionEstablished;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use PDO;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -17,6 +25,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        $this->app->bind('db.connector.pgsql', ResilientPostgresConnector::class);
+
         $this->app->bind(SmsSender::class, fn () => match (config('ticketflow.sms.driver')) {
             'africastalking' => new AfricasTalkingSmsSender(config('ticketflow.sms.africastalking')),
             default => new LogSmsSender,
@@ -28,6 +38,27 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // The homepage caches its event list; refresh it whenever what it shows changes.
+        foreach ([EventModel::class, TicketType::class, EventCategory::class] as $model) {
+            $model::saved(fn () => HomeController::forgetCache());
+            $model::deleted(fn () => HomeController::forgetCache());
+        }
+
+        // A persistent connection outlives the request that opened it. If that request died
+        // mid-transaction, roll it back so the next request's writes are not silently lost.
+        // inTransaction() reads libpq's local state, so this costs no round trip.
+        Event::listen(ConnectionEstablished::class, function (ConnectionEstablished $event): void {
+            if ($event->connection->getDriverName() !== 'pgsql' || ! ($event->connection->getConfig('options')[PDO::ATTR_PERSISTENT] ?? false)) {
+                return;
+            }
+
+            $pdo = $event->connection->getPdo();
+
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+        });
+
         // Keep this app's dev-server marker isolated from stale workspace hot files.
         $hotFile = public_path('hot-ticketflow');
 

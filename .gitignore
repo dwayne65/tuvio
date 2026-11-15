@@ -27,3 +27,8 @@ Homestead.yaml
 Thumbs.db
 .env.backup-*
 .env.save
+.neon
+
+# Local backups and build output
+storage/backups/
+/bootstrap/ssr

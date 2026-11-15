@@ -38,6 +38,25 @@ class PublicPagesTest extends TestCase
             ->where('spotlightEvents', fn ($events) => collect($events)->pluck('slug')->all() === ['headliner', 'happening-now', 'soon', 'later']));
     }
 
+    public function test_home_shows_event_changes_immediately_despite_caching(): void
+    {
+        $org = Organization::create(['owner_id' => User::factory()->create()->id, 'name' => 'Acme', 'slug' => 'acme', 'default_currency' => 'UGX', 'status' => 'active']);
+        $event = $org->events()->create([
+            'title' => 'Draft gig', 'slug' => 'draft-gig', 'status' => 'draft', 'type' => 'physical', 'visibility' => 'public',
+            'start_at' => now()->addWeek(), 'currency' => 'UGX',
+        ]);
+
+        $this->get('/')->assertInertia(fn ($page) => $page->where('spotlightEvents', []));
+
+        $event->update(['status' => 'published']);
+
+        $this->get('/')->assertInertia(fn ($page) => $page->where('spotlightEvents.0.slug', 'draft-gig'));
+
+        $event->delete();
+
+        $this->get('/')->assertInertia(fn ($page) => $page->where('spotlightEvents', []));
+    }
+
     public function test_home_categories_count_only_public_upcoming_events(): void
     {
         $org = Organization::create(['owner_id' => User::factory()->create()->id, 'name' => 'Acme', 'slug' => 'acme', 'default_currency' => 'UGX', 'status' => 'active']);

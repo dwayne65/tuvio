@@ -23,6 +23,7 @@ interface Ev {
     fee_payer: FeePayer; commission_bps: number;
     public_url: string; cover_url: string | null; ticket_types: TT[];
     sell_on_ussd: boolean;
+    ussd_dial: string | null;
 }
 
 /** Upcoming events on USSD against the plan limit: null is unlimited, 0 means the plan has no USSD. */
@@ -150,7 +151,7 @@ export default function EditEvent({ event, categories, ussd }: PageProps<{ event
                             </form>
                     </Panel>
 
-                    <UssdPanel slug={event.slug} enabled={event.sell_on_ussd} usage={ussd} />
+                    <UssdPanel slug={event.slug} enabled={event.sell_on_ussd} dial={event.ussd_dial} usage={ussd} />
 
                     {/* Ticket types */}
                     <Panel
@@ -191,7 +192,7 @@ export default function EditEvent({ event, categories, ussd }: PageProps<{ event
     );
 }
 
-function UssdPanel({ slug, enabled, usage }: { slug: string; enabled: boolean; usage: UssdUsage }) {
+function UssdPanel({ slug, enabled, dial, usage }: { slug: string; enabled: boolean; dial: string | null; usage: UssdUsage }) {
     const [saving, setSaving] = useState(false);
     const full = !enabled && usage.limit !== null && usage.used >= usage.limit;
 
@@ -227,6 +228,13 @@ function UssdPanel({ slug, enabled, usage }: { slug: string; enabled: boolean; u
                             <span className={cn('absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all', enabled ? 'left-[1.125rem]' : 'left-0.5')} />
                         </span>
                     </button>
+                    {enabled && dial && (
+                        <div className="mt-3 rounded-2xl border border-brand-500/20 bg-brand-500/[0.06] px-4 py-3">
+                            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Your event's USSD code</p>
+                            <p className="mt-1 font-mono text-2xl font-extrabold text-ink">{dial}</p>
+                            <p className="mt-1 text-xs text-slate-500">Put it on posters and radio ads. Callers who dial it go straight to this event's tickets.</p>
+                        </div>
+                    )}
                     <p className="mt-3 text-xs text-slate-500">
                         {usage.limit === null
                             ? 'Your plan includes USSD sales for unlimited events.'

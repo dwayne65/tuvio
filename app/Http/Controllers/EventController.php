@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Domain\Ussd\UssdMenu;
 use App\Models\Event;
 use App\Models\EventCategory;
 use App\Models\Promoter;
@@ -93,6 +94,7 @@ class EventController extends Controller
                 'refund_policy' => $event->refund_policy,
                 // Booking fee rate added at checkout when the organizer passes the fee to buyers.
                 'booking_fee_bps' => $event->passesFeeToBuyer() ? $event->commissionBps() : 0,
+                'ussd_dial' => app(UssdMenu::class)->offers($event) ? $event->ussdDialString() : null,
                 'latitude' => $event->latitude,
                 'longitude' => $event->longitude,
                 'schedule' => $event->scheduleItems->map(fn ($s) => [

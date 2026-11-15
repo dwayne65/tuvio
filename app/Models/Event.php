@@ -20,7 +20,7 @@ class Event extends Model
         'start_at', 'end_at', 'timezone',
         'venue_name', 'venue_address', 'city', 'country', 'latitude', 'longitude', 'online_url',
         'currency', 'commission_bps', 'fee_payer', 'refund_policy',
-        'capacity', 'is_featured', 'published_at', 'sell_on_ussd',
+        'capacity', 'is_featured', 'published_at', 'sell_on_ussd', 'ussd_code',
     ];
 
     protected function casts(): array
@@ -35,6 +35,7 @@ class Event extends Model
             'longitude' => 'decimal:7',
             'is_featured' => 'boolean',
             'sell_on_ussd' => 'boolean',
+            'ussd_code' => 'integer',
             'commission_bps' => 'integer',
             'capacity' => 'integer',
             'views_count' => 'integer',
@@ -48,6 +49,14 @@ class Event extends Model
     public function commissionBps(): int
     {
         return (int) ($this->commission_bps ?? $this->organization->commissionBps());
+    }
+
+    /** What a caller dials to open this event's tickets directly, e.g. *165*24#. */
+    public function ussdDialString(): ?string
+    {
+        $shortcode = config('ticketflow.ussd.shortcode');
+
+        return $this->ussd_code && $shortcode ? '*'.$shortcode.'*'.$this->ussd_code.'#' : null;
     }
 
     public function passesFeeToBuyer(): bool

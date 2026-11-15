@@ -4,7 +4,7 @@ import { Logo } from '@/Components/Logo';
 import { cn } from '@/lib/utils';
 import { PageProps } from '@/types';
 import { Link, router, usePage } from '@inertiajs/react';
-import { BarChart3, Bell, Building2, ClipboardCheck, CreditCard, HandCoins, LayoutDashboard, LifeBuoy, LogOut, Menu, Settings, Users, Wallet, X } from 'lucide-react';
+import { BarChart3, Bell, Building2, ClipboardCheck, CreditCard, HandCoins, LayoutDashboard, LifeBuoy, LogOut, Menu, Settings, Smartphone, Users, Wallet, X } from 'lucide-react';
 import { ReactNode, useState } from 'react';
 
 const nav = [
@@ -14,6 +14,7 @@ const nav = [
     { label: 'Organizers', href: '/admin/organizers', icon: Building2 },
     { label: 'Earnings', href: '/admin/earnings', icon: HandCoins },
     { label: 'Transactions', href: '/admin/transactions', icon: CreditCard },
+    { label: 'USSD', href: '/admin/ussd', icon: Smartphone },
     { label: 'Payouts', href: '/admin/payouts', icon: Wallet },
     { label: 'Support', href: '/admin/support', icon: LifeBuoy },
     { label: 'Notifications', href: '/notifications', icon: Bell },

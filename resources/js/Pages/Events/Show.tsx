@@ -7,7 +7,7 @@ import { tierMeta } from '@/lib/ticketTiers';
 import { cn, formatDateTime, money } from '@/lib/utils';
 import { EventSummary, PageProps } from '@/types';
 import { Head, router } from '@inertiajs/react';
-import { ArrowRight, CalendarDays, Check, ChevronLeft, ChevronsRight, Clock, Globe, MapPin, Minus, Plus, Share2, Ticket, Wallet } from 'lucide-react';
+import { ArrowRight, CalendarDays, Check, ChevronLeft, ChevronsRight, Clock, Globe, MapPin, Minus, Plus, Share2, Smartphone, Ticket, Wallet } from 'lucide-react';
 import { ReactNode, useMemo, useState } from 'react';
 
 interface TicketTypeDTO {
@@ -33,6 +33,7 @@ interface EventDetail extends EventSummary {
     refund_policy: string | null;
     /** Booking fee added at checkout, in basis points; 0 when the organizer pays it. */
     booking_fee_bps: number;
+    ussd_dial: string | null;
     schedule: { id: number; title: string; description: string | null; speaker: string | null; starts_at: string | null }[];
     ticket_types: TicketTypeDTO[];
 }
@@ -262,6 +263,21 @@ export default function EventShow({ event, related, reviews }: PageProps<{ event
                                     );
                                 })}
                             </div>
+
+                            {event.ussd_dial && (
+                                <a
+                                    href={`tel:${encodeURIComponent(event.ussd_dial)}`}
+                                    className="mt-4 flex items-center gap-3 rounded-2xl border border-brand-500/20 bg-brand-500/[0.06] px-4 py-3 transition-colors hover:bg-brand-500/10"
+                                >
+                                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand-500/15 text-brand-500">
+                                        <Smartphone className="h-4 w-4" />
+                                    </span>
+                                    <span className="min-w-0 text-sm">
+                                        <span className="block font-semibold text-ink">No data? Dial <span className="font-mono">{event.ussd_dial}</span></span>
+                                        <span className="block text-xs text-slate-500">Buy on any phone and pay with Mobile Money</span>
+                                    </span>
+                                </a>
+                            )}
 
                             <div className="mt-5 hidden border-t border-tint/[0.08] pt-4 md:block">
                                 <div className="flex items-center justify-between">

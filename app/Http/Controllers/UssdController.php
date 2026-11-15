@@ -22,6 +22,8 @@ class UssdController extends Controller
             'msisdn' => ['required', 'string', 'regex:/^[0-9]{9,15}$/'],
             'state' => ['required', 'string'],
             'message' => ['nullable', 'string', 'max:200'],
+            'shortcode' => ['nullable', 'string', 'max:20'],
+            'mccmnc' => ['nullable', 'string', 'max:10'],
         ]);
 
         $reply = $this->menu->handle($data);

@@ -15,6 +15,11 @@ class PaymentManager
     {
         $name ??= config('ticketflow.payments.default');
 
+        // The fake provider approves every payment, so it must never run in production.
+        if ($name === 'fake' && app()->isProduction()) {
+            throw new InvalidArgumentException('The fake payment provider cannot be used in production.');
+        }
+
         return match ($name) {
             'fake' => new FakeProvider,
             'flutterwave' => new FlutterwaveProvider(config('ticketflow.payments.flutterwave')),

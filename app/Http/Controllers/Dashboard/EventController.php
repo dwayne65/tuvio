@@ -109,6 +109,7 @@ class EventController extends Controller
                 'fee_payer' => $event->fee_payer, 'commission_bps' => $event->commissionBps(),
                 'cover_url' => $event->cover_url,
                 'sell_on_ussd' => $event->sell_on_ussd,
+                'ussd_dial' => $event->ussdDialString(),
                 'public_url' => route('events.show', $event->slug),
                 'ticket_types' => $event->ticketTypes->map(fn ($t) => [
                     'id' => $t->id, 'name' => $t->name, 'kind' => $t->kind, 'tier' => $t->resolvedTier(),

@@ -26,6 +26,10 @@ return [
     // disabled anywhere real money or a real payment provider is used.
     'demo_mode' => (bool) env('TICKETFLOW_DEMO_MODE', false),
 
+    // Shared secret for POST /internal/cron, which runs the scheduler on hosts without cron.
+    // Leave empty to switch the endpoint off.
+    'cron_token' => env('CRON_TOKEN'),
+
     // Days after an event ends before organizer earnings become eligible for payout.
     'payout_settlement_days' => (int) env('TICKETFLOW_PAYOUT_SETTLEMENT_DAYS', 7),
 
@@ -47,6 +51,11 @@ return [
     ],
 
     'ussd' => [
+        // The shortcode the USSD provider assigned, without * and #. Events add their own
+        // code after it (*288*24#). Dial codes are not shown anywhere until this is set.
+        'shortcode' => env('USSD_SHORTCODE'),
+        // Telcos cut screens longer than this; replies are trimmed to fit.
+        'max_screen_length' => (int) env('USSD_MAX_SCREEN_LENGTH', 182),
         // PEM public key the USSD gateway signs callbacks with; "\n" escapes are allowed in .env.
         'public_key' => str_replace('\n', "\n", (string) env('USSD_PUBLIC_KEY')),
         // How long a caller's place in the menu is kept between keypresses.
