@@ -39,7 +39,9 @@ return [
         ],
 
         'public' => [
-            'driver' => 'local',
+            // "database" keeps uploads in the stored_files table (for hosts whose disk is
+            // wiped on restart, like Render's free plan); they are then served from /media.
+            'driver' => env('PUBLIC_DISK_DRIVER', 'local'),
             'root' => storage_path('app/public'),
             // Root-relative so uploads load on whichever host serves the page (domain, LAN IP, app WebView).
             'url' => '/storage',

@@ -4,6 +4,7 @@ use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\ContributionController;
 use App\Http\Controllers\CronController;
 use App\Http\Controllers\EventController;
+use App\Http\Controllers\MediaController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\SupportController;
@@ -35,6 +36,9 @@ Route::get('/tickets/{code}/download', [TicketController::class, 'download'])->m
 Route::post('/webhooks/flutterwave', [WebhookController::class, 'flutterwave'])->name('webhooks.flutterwave');
 Route::post('/webhooks/paytota', [WebhookController::class, 'paytota'])->name('webhooks.paytota');
 Route::post('/webhooks/ussd', UssdController::class)->middleware('throttle:120,1')->name('webhooks.ussd');
+
+// Uploaded images kept in the database (PUBLIC_DISK_DRIVER=database)
+Route::get('/media/{path}', [MediaController::class, 'show'])->where('path', '.+')->name('media.show');
 
 // Scheduler trigger for hosts without cron (token-checked in the controller)
 Route::post('/internal/cron', CronController::class)->middleware('throttle:10,1')->name('internal.cron');

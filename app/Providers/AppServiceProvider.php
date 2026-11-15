@@ -9,13 +9,17 @@ use App\Http\Controllers\HomeController;
 use App\Models\Event as EventModel;
 use App\Models\EventCategory;
 use App\Models\TicketType;
+use App\Support\DatabaseFilesystemAdapter;
 use App\Support\ResilientPostgresConnector;
 use Illuminate\Database\Events\ConnectionEstablished;
+use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use League\Flysystem\Filesystem;
 use PDO;
 
 class AppServiceProvider extends ServiceProvider
@@ -38,6 +42,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Storage::extend('database', function ($app, array $config): FilesystemAdapter {
+            $adapter = new DatabaseFilesystemAdapter($app['db']->connection($config['connection'] ?? null));
+
+            return new FilesystemAdapter(new Filesystem($adapter, $config), $adapter, $config);
+        });
+
         // The homepage caches its event list; refresh it whenever what it shows changes.
         foreach ([EventModel::class, TicketType::class, EventCategory::class] as $model) {
             $model::saved(fn () => HomeController::forgetCache());
