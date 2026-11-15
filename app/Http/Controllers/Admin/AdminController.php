@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Domain\Analytics\SiteTraffic;
 use App\Domain\Ledger\PlatformEarnings;
 use App\Domain\Payouts\PayoutRejected;
 use App\Domain\Payouts\PayoutService;
@@ -41,6 +42,7 @@ class AdminController extends Controller
 
         return Inertia::render('Admin/Dashboard', [
             'series' => $series,
+            'traffic' => app(SiteTraffic::class)->summary(),
             'metrics' => [
                 'users' => User::count(),
                 'organizers' => Organization::where('status', 'active')->count(),

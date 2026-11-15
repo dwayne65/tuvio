@@ -58,3 +58,32 @@ export function RankedBars({ data }: { data: { title: string; sold: number }[] }
         </ResponsiveContainer>
     );
 }
+
+const VISITORS = '#1fb8a6';
+
+/** Page views and unique visitors per day — two series, views emphasised. */
+export function TrafficTrend({ data }: { data: { date: string; views: number; visitors: number }[] }) {
+    return (
+        <ResponsiveContainer width="100%" height={260}>
+            <AreaChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                <defs>
+                    <linearGradient id="views" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={BRAND} stopOpacity={0.3} />
+                        <stop offset="100%" stopColor={BRAND} stopOpacity={0} />
+                    </linearGradient>
+                </defs>
+                <CartesianGrid vertical={false} stroke={GRID} />
+                <XAxis dataKey="date" tickFormatter={fmtDay} tick={{ fill: AXIS, fontSize: 11 }} axisLine={false} tickLine={false} minTickGap={24} />
+                <YAxis allowDecimals={false} tick={{ fill: AXIS, fontSize: 11 }} axisLine={false} tickLine={false} width={36} />
+                <Tooltip
+                    cursor={{ stroke: BRAND, strokeOpacity: 0.3 }}
+                    contentStyle={{ borderRadius: 12, border: '1px solid color-mix(in srgb, var(--color-tint) 10%, transparent)', background: 'var(--color-card)', color: 'var(--color-ink)', boxShadow: '0 20px 40px -20px rgb(0 0 0 / 0.9)', fontSize: 13 }}
+                    labelFormatter={(l) => fmtDay(l as string)}
+                    formatter={(v: number, name: string) => [v.toLocaleString(), name === 'views' ? 'Page views' : 'Visitors']}
+                />
+                <Area type="monotone" dataKey="views" stroke={BRAND} strokeWidth={2} fill="url(#views)" />
+                <Area type="monotone" dataKey="visitors" stroke={VISITORS} strokeWidth={2} fill="none" />
+            </AreaChart>
+        </ResponsiveContainer>
+    );
+}
