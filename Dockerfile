@@ -42,7 +42,7 @@ COPY --chown=www-data:www-data --from=vendor /app/vendor ./vendor
 COPY --chown=www-data:www-data --from=assets /app/public/build ./public/build
 
 RUN rm -rf public/hot public/hot-ticketflow bootstrap/cache/*.php storage/logs/*.log \
-    && mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/views storage/app/public storage/logs \
+    && mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/views storage/app/public storage/logs storage/fonts \
     && chown -R www-data:www-data storage bootstrap/cache
 
 COPY docker/entrypoint.sh /usr/local/bin/tuvio-entrypoint

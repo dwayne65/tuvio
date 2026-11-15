@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Domain\Orders\OrderService;
 use App\Domain\Payments\PaymentService;
+use App\Domain\Tickets\TicketPdf;
 use App\Mail\TicketsIssuedMail;
 use App\Models\Organization;
 use App\Models\Payment;
@@ -15,6 +16,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class TicketPdfTest extends TestCase
@@ -170,6 +172,25 @@ class TicketPdfTest extends TestCase
                 ->where('tickets.0.price_minor', 5000000)
                 ->where('tickets.0.currency', 'UGX')
                 ->where('tickets.0.tier', 'vip')
+                ->where('tickets.0.design.key', 'vip')
+                ->where('tickets.0.design.label', 'VIP')
                 ->where('tickets.0.perks', ['Fast-track entry']));
+    }
+
+    /** @return array<string, array{string}> */
+    public static function tiers(): array
+    {
+        return ['general' => ['general'], 'vip' => ['vip'], 'vvip' => ['vvip'], 'guest' => ['guest'], 'other' => ['other']];
+    }
+
+    #[DataProvider('tiers')]
+    public function test_every_ticket_design_renders_as_a_ticket_and_a_print_sheet(string $tier): void
+    {
+        $ticket = $this->issuedTicketFor(User::factory()->create());
+        $ticket->ticketType->update(['tier' => $tier]);
+
+        foreach (['ticket', 'print'] as $format) {
+            $this->assertStringStartsWith('%PDF', app(TicketPdf::class)->render($ticket->fresh(), $format)->output(), $format);
+        }
     }
 }

@@ -42,6 +42,6 @@ class TicketController extends Controller
             ->whereHas('event', fn ($q) => $q->where('organization_id', $org->id))
             ->firstOrFail();
 
-        return $this->renderer->render($ticket)->stream("ticket-{$ticket->code}.pdf");
+        return $this->renderer->render($ticket, 'print')->stream("ticket-{$ticket->code}.pdf");
     }
 }

@@ -210,7 +210,7 @@ export default function CreateEvent({ categories, currency, commission_bps }: Pa
 
                                 <div className="rounded-[1.25rem] border border-dashed border-tint/15 p-4">
                                     <p className="text-sm font-semibold text-ink">Add another ticket</p>
-                                    <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                                    <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
                                         {TICKET_TIERS.map((tier) => {
                                             const Icon = tier.icon;
                                             return (

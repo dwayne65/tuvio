@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class TicketType extends Model
 {
     /** Ticket tiers an organizer can choose; each gets its own ticket design. */
-    public const TIERS = ['general', 'vip', 'vvip', 'other'];
+    public const TIERS = ['general', 'vip', 'vvip', 'guest', 'other'];
 
     protected $fillable = [
         'event_id', 'name', 'tier', 'kind', 'description', 'perks', 'price_minor', 'currency',
@@ -56,6 +56,7 @@ class TicketType extends Model
         return match (true) {
             (bool) preg_match('/vvip|v\.v\.i\.p|platinum|diamond/', $name) => 'vvip',
             (bool) preg_match('/vip|v\.i\.p|gold|premium/', $name) => 'vip',
+            (bool) preg_match('/\bguests?\b|complimentary|\bcomp\b|invitation/', $name) => 'guest',
             default => 'general',
         };
     }

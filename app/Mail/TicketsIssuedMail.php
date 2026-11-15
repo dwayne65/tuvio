@@ -6,7 +6,7 @@ use App\Domain\Tickets\TicketPdf;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Ticket;
-use App\Support\TicketArtwork;
+use App\Support\TicketDesign;
 use Endroid\QrCode\QrCode;
 use Endroid\QrCode\Writer\PngWriter;
 use Illuminate\Bus\Queueable;
@@ -15,7 +15,6 @@ use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
@@ -46,7 +45,6 @@ class TicketsIssuedMail extends Mailable
             ? 'Online event'
             : collect([$event->venue_name, $event->venue_address, $event->city])->filter()->implode(', ');
         $payment = $order->payments->firstWhere('status', 'successful') ?? $order->payments->last();
-        $artwork = app(TicketArtwork::class);
 
         return new Content(
             view: 'mail.tickets-issued',
@@ -67,7 +65,8 @@ class TicketsIssuedMail extends Mailable
                     'attendee' => $ticket->attendee_name ?: $order->buyer_name,
                     'qr_png' => (new PngWriter)->write(new QrCode(data: $ticket->qr_token, size: 360, margin: 10))->getString(),
                     'download_url' => URL::signedRoute('tickets.download', $ticket->code),
-                    'tier' => Arr::only($artwork->tier($ticket), ['label', 'glyph', 'accent', 'accent2', 'title', 'muted', 'baseHex']),
+                    'price' => $this->ticketPrice($ticket),
+                    'design' => TicketDesign::forWallet($ticket),
                 ]),
                 'items' => $order->items->map(fn (OrderItem $item) => [
                     'label' => $item->description,
@@ -144,6 +143,14 @@ class TicketsIssuedMail extends Mailable
         }
 
         return ['data' => $data, 'name' => basename($path), 'mime' => $disk->mimeType($path) ?: 'image/jpeg'];
+    }
+
+    /** What the attendee paid for this ticket, falling back to the ticket type's list price. */
+    private function ticketPrice(Ticket $ticket): string
+    {
+        $minor = (int) ($ticket->orderItem?->unit_price_minor ?? $ticket->ticketType->price_minor);
+
+        return $minor === 0 ? 'Complimentary' : $this->money($minor);
     }
 
     private function paymentLabel(?string $method, ?string $provider): string

@@ -132,7 +132,7 @@ export function TicketTypeEditor({ value: d, onChange, currency, errors = {}, er
         <div className="@container space-y-6">
             {/* Tier */}
             <Section icon={Layers} title="Ticket tier" hint="Each tier gets its own ticket design">
-                <div role="radiogroup" aria-label="Ticket tier" className="grid grid-cols-2 gap-2.5 @min-[34rem]:grid-cols-4">
+                <div role="radiogroup" aria-label="Ticket tier" className="grid grid-cols-2 gap-2.5 @min-[34rem]:grid-cols-3 @min-[48rem]:grid-cols-5">
                     {TICKET_TIERS.map((t) => {
                         const active = t.key === d.tier;
                         const Icon = t.icon;

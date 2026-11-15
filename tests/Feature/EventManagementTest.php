@@ -221,6 +221,7 @@ class EventManagementTest extends TestCase
                     'sales_start_at' => now()->addDay()->format('Y-m-d\TH:i'), 'sales_end_at' => now()->addWeek()->format('Y-m-d\TH:i'),
                 ],
                 ['tier' => 'other', 'name' => 'Community pass', 'kind' => 'free', 'price_minor' => 9900, 'max_per_order' => 1],
+                ['tier' => 'guest', 'name' => 'Guest List', 'kind' => 'free', 'price_minor' => 0, 'max_per_order' => 1],
             ],
         ]))->assertSessionHasNoErrors();
 
@@ -230,6 +231,7 @@ class EventManagementTest extends TestCase
         $this->assertNotNull($types['VVIP Table']->sales_start_at);
         $this->assertSame('other', $types['Community pass']->tier);
         $this->assertSame(0, $types['Community pass']->price_minor);
+        $this->assertSame('guest', $types['Guest List']->tier);
     }
 
     public function test_organizer_can_add_and_edit_a_tiered_ticket_type(): void

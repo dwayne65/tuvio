@@ -7,7 +7,8 @@ export function Qr({ value, size = 180 }: { value: string; size?: number }) {
 
     useEffect(() => {
         let active = true;
-        QRCode.toDataURL(value, { width: size, margin: 1, color: { dark: '#111827', light: '#ffffff' } })
+        // Drawn at twice the display size so it stays crisp on high-density phone screens.
+        QRCode.toDataURL(value, { width: size * 2, margin: 1, color: { dark: '#111827', light: '#ffffff' } })
             .then((url) => active && setSrc(url))
             .catch(() => active && setSrc(''));
         return () => {

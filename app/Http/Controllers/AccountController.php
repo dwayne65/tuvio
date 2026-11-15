@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Models\Ticket;
+use App\Support\TicketDesign;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -16,7 +17,7 @@ class AccountController extends Controller
         $tickets = Ticket::query()
             ->whereHas('order', fn ($q) => $q->where('user_id', $request->user()->id))
             ->where('status', '!=', 'void')
-            ->with(['event', 'ticketType', 'orderItem'])
+            ->with(['event.organization', 'event.category', 'ticketType', 'orderItem'])
             ->latest()
             ->get()
             ->map(fn (Ticket $t) => [
@@ -26,6 +27,8 @@ class AccountController extends Controller
                 'attendee_name' => $t->attendee_name,
                 'type' => $t->ticketType->name,
                 'tier' => $t->ticketType->resolvedTier(),
+                'number' => str_pad((string) $t->id, 6, '0', STR_PAD_LEFT),
+                'design' => TicketDesign::forWallet($t),
                 'perks' => $t->ticketType->perks ?? [],
                 // What the attendee actually paid, falling back to the list price.
                 'price_minor' => $t->orderItem?->unit_price_minor ?? $t->ticketType->price_minor,
@@ -38,6 +41,9 @@ class AccountController extends Controller
                     'start_at' => $t->event->start_at?->toIso8601String(),
                     'venue_name' => $t->event->venue_name,
                     'city' => $t->event->city,
+                    'venue_address' => $t->event->venue_address,
+                    'organizer' => $t->event->organization?->name,
+                    'category' => $t->event->category?->name,
                     'type' => $t->event->type,
                 ],
             ]);

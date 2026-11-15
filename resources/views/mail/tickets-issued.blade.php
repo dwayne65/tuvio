@@ -106,40 +106,49 @@
                 <p style="margin:0 0 18px; {{ $font }} font-size:14px; line-height:21px; color:#64748B;">Each QR code lets one person in. They're attached as a PDF too, and work offline.</p>
 
                 @foreach ($tickets as $ticket)
-                    @php($tier = $ticket['tier'])
-                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="{{ $tier['baseHex'] }}" style="background-color:{{ $tier['baseHex'] }}; background-image:linear-gradient(135deg,{{ $tier['baseHex'] }} 0%,{{ $tier['baseHex'] }} 55%,{{ $tier['accent'] }} 160%); border-radius:22px; margin-bottom:10px;">
+                    @php
+                        $d = $ticket['design'];
+                        $metal = "linear-gradient(90deg,{$d['metal'][0]},{$d['metal'][1]} 45%,{$d['metal'][2]})";
+                        $rule = $d['dark'] ? 'rgba(255,255,255,0.16)' : 'rgba(20,33,61,0.18)';
+                        $serif = "font-family:'Instrument Serif',Georgia,'Times New Roman',serif;";
+                    @endphp
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="{{ $d['base'] }}" style="background-color:{{ $d['base'] }}; background-image:linear-gradient(135deg,{{ $d['base'] }} 0%,{{ $d['base2'] }} 100%); border-radius:22px; margin-bottom:12px; border:1px solid {{ $rule }};">
                         <tr>
-                            <td height="4" colspan="2" style="height:4px; line-height:4px; font-size:0; border-radius:22px 22px 0 0; background-color:{{ $tier['accent'] }}; background-image:linear-gradient(90deg,{{ $tier['accent2'] }},{{ $tier['accent'] }},{{ $tier['title'] }});">&nbsp;</td>
+                            <td height="4" colspan="2" bgcolor="{{ $d['metal'][1] }}" style="height:4px; line-height:4px; font-size:0; border-radius:22px 22px 0 0; background-color:{{ $d['metal'][1] }}; background-image:{{ $metal }};">&nbsp;</td>
                         </tr>
                         <tr>
-                            <td class="tf-stack" valign="middle" style="padding:22px 24px 24px; border-right:2px dashed rgba(255,255,255,0.18);">
-                                <p style="margin:0; {{ $font }} font-size:12px; font-weight:800; letter-spacing:2px; text-transform:uppercase; color:{{ $tier['accent'] }};">{{ $tier['glyph'] }}&nbsp; {{ $tier['label'] }}</p>
-                                <p style="margin:10px 0 0; {{ $font }} font-size:22px; line-height:26px; font-weight:800; letter-spacing:-0.4px; color:#FFFFFF; text-transform:uppercase;">{{ $event->title }}</p>
-                                <p style="margin:4px 0 0; {{ $font }} font-size:13px; line-height:19px; color:{{ $tier['muted'] }};">{{ $ticket['type'] }} · {{ $when }}</p>
+                            <td class="tf-stack" valign="top" style="padding:22px 24px 22px; border-right:2px dashed {{ $rule }};">
+                                <p style="margin:0; {{ $font }} font-size:10px; font-weight:700; letter-spacing:2.2px; text-transform:uppercase; color:{{ $d['muted'] }};">TUVIO &nbsp;presents &nbsp;·&nbsp; <span style="color:{{ $d['accent'] }};">{{ $organizer->name }}</span></p>
+                                <p style="margin:10px 0 0; {{ $serif }} font-size:30px; line-height:32px; font-weight:400; color:{{ $d['ink'] }};">{{ $event->title }}</p>
+                                <p style="margin:8px 0 0; {{ $font }} font-size:13px; line-height:19px; color:{{ $d['muted'] }};">{{ $when }}@if ($time) · {{ $time }}@endif<br>{{ $place }}</p>
 
-                                <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:18px;">
+                                <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:16px; border-top:1px solid {{ $rule }};">
                                     <tr>
-                                        <td style="padding-right:22px;">
-                                            <p style="margin:0; {{ $font }} font-size:10px; font-weight:700; letter-spacing:1.6px; text-transform:uppercase; color:{{ $tier['muted'] }};">Admit one</p>
-                                            <p style="margin:4px 0 0; {{ $font }} font-size:15px; font-weight:700; color:#FFFFFF;">{{ $ticket['attendee'] }}</p>
+                                        <td style="padding:14px 22px 0 0;" valign="top">
+                                            <p style="margin:0; {{ $font }} font-size:10px; font-weight:700; letter-spacing:1.6px; text-transform:uppercase; color:{{ $d['muted'] }};">Ticket holder</p>
+                                            <p style="margin:4px 0 0; {{ $font }} font-size:15px; font-weight:700; color:{{ $d['ink'] }};">{{ $ticket['attendee'] }}</p>
                                         </td>
-                                        <td>
-                                            <p style="margin:0; {{ $font }} font-size:10px; font-weight:700; letter-spacing:1.6px; text-transform:uppercase; color:{{ $tier['muted'] }};">Ticket code</p>
-                                            <p style="margin:4px 0 0; {{ $mono }} font-size:14px; font-weight:700; letter-spacing:0.5px; color:#FFFFFF;">{{ $ticket['code'] }}</p>
+                                        <td style="padding:14px 22px 0 0;" valign="top">
+                                            <p style="margin:0; {{ $font }} font-size:10px; font-weight:700; letter-spacing:1.6px; text-transform:uppercase; color:{{ $d['muted'] }};">{{ $ticket['type'] }}</p>
+                                            <p style="margin:4px 0 0; {{ $font }} font-size:15px; font-weight:700; color:{{ $d['ink'] }};">{{ $ticket['price'] }}</p>
                                         </td>
                                     </tr>
                                 </table>
 
-                                <p style="margin:18px 0 0; {{ $font }} font-size:13px;">
-                                    <a href="{{ $ticket['download_url'] }}" style="color:{{ $tier['title'] }}; font-weight:700; text-decoration:none;">Download ticket (PDF) &rarr;</a>
+                                <p style="margin:16px 0 0; {{ $font }} font-size:13px;">
+                                    <a href="{{ $ticket['download_url'] }}" style="color:{{ $d['accent'] }}; font-weight:700; text-decoration:none;">Download ticket (PDF) &rarr;</a>
                                 </p>
                             </td>
-                            <td class="tf-stack" width="176" align="center" valign="middle" style="padding:20px 20px 22px;">
-                                <table role="presentation" cellpadding="0" cellspacing="0" border="0" bgcolor="#FFFFFF" style="background-color:#FFFFFF; border-radius:18px;">
+                            <td class="tf-stack" width="184" align="center" valign="top" bgcolor="{{ $d['stubFrom'] }}" style="padding:20px 18px 22px; background-color:{{ $d['stubFrom'] }}; background-image:linear-gradient(160deg,{{ $d['stubFrom'] }},{{ $d['stubTo'] }}); border-radius:0 22px 22px 0;">
+                                <p style="margin:0; {{ $font }} font-size:9px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:{{ $d['stubMuted'] }};">{{ $d['badge'] }}</p>
+                                <p style="margin:6px 0 0; {{ $font }} font-size:{{ mb_strlen($d['label']) > 7 ? 18 : 26 }}px; line-height:30px; font-weight:800; letter-spacing:1px; color:{{ $d['metal'][1] }};">{{ $d['glyph'] }} {{ $d['label'] }}</p>
+                                <p style="margin:4px 0 12px; {{ $font }} font-size:11px; line-height:15px; color:{{ $d['stubInk'] }};">Admit one · {{ $d['privilege'] }}</p>
+                                <table role="presentation" cellpadding="0" cellspacing="0" border="0" bgcolor="#FFFFFF" style="background-color:#FFFFFF; border-radius:16px;">
                                     <tr>
                                         <td align="center" style="padding:12px 12px 10px;">
                                             <img src="{{ $embed($ticket['qr_png'], $ticket['code'].'.png') }}" width="132" height="132" alt="QR code for ticket {{ $ticket['code'] }}" style="display:block; width:132px; height:132px; border:0;">
-                                            <p style="margin:6px 0 0; {{ $font }} font-size:10px; font-weight:700; letter-spacing:1.6px; text-transform:uppercase; color:#8A8AA0;">Scan at entry</p>
+                                            <p style="margin:6px 0 0; {{ $mono }} font-size:12px; font-weight:700; letter-spacing:0.5px; color:#0E1220;">{{ $ticket['code'] }}</p>
+                                            <p style="margin:3px 0 0; {{ $font }} font-size:9px; font-weight:700; letter-spacing:1.6px; text-transform:uppercase; color:#6B7183;">Scan at entry</p>
                                         </td>
                                     </tr>
                                 </table>
