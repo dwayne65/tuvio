@@ -4,15 +4,15 @@ return [
     // Default platform currency (ISO-4217). UGX for the primary (Uganda/Africa) market.
     'default_currency' => env('TICKETFLOW_CURRENCY', 'UGX'),
 
-    // Default platform commission in basis points (500 = 5.00%).
-    // Can be overridden per organization and per event.
-    'commission_bps' => (int) env('TICKETFLOW_COMMISSION_BPS', 500),
+    // Default platform commission in basis points (450 = 4.50%).
+    // Plans set their own rate; it can also be overridden per organization and per event.
+    'commission_bps' => (int) env('TICKETFLOW_COMMISSION_BPS', 450),
 
-    // Tax charged on the platform fee (not on the ticket price), in basis points: 1800 = 18%
-    // Uganda VAT. It follows the fee: added for buyers when they pay the fee, otherwise
-    // taken from the organizer's earnings with the commission. Held as TAX_PAYABLE.
+    // Tax charged on the platform fee (not on the ticket price), in basis points; 0 = no tax
+    // (1800 would be Uganda's 18% VAT). It follows the fee: added for buyers when they pay
+    // the fee, otherwise taken from the organizer's earnings with the commission. Held as TAX_PAYABLE.
     'tax' => [
-        'bps' => (int) env('TICKETFLOW_TAX_BPS', 1800),
+        'bps' => (int) env('TICKETFLOW_TAX_BPS', 0),
         'label' => env('TICKETFLOW_TAX_LABEL', 'VAT'),
     ],
 

@@ -74,7 +74,7 @@ class SubscriptionTest extends TestCase
         [, $org] = $this->organizerWithOrg();
 
         $this->assertSame('starter', $org->currentPlan()->slug);
-        $this->assertSame(1000, $org->commissionBps());
+        $this->assertSame(450, $org->commissionBps());
         $this->assertFalse($org->planAllows('promo_codes'));
     }
 
@@ -100,7 +100,7 @@ class SubscriptionTest extends TestCase
             ->assertSessionHas('success', "You're on the Professional plan.");
 
         $this->assertSame('professional', $org->currentPlan()->slug);
-        $this->assertSame(1000, $org->commissionBps());
+        $this->assertSame(450, $org->commissionBps());
         $this->assertTrue($org->planAllows('promo_codes'));
         $this->assertDatabaseCount('subscription_invoices', 0);
     }

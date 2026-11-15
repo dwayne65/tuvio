@@ -17,7 +17,7 @@ class SubscriptionPlanSeeder extends Seeder
     {
         return [
             [
-                'name' => 'Starter', 'slug' => 'starter', 'price_minor' => 0, 'commission_bps' => 1000,
+                'name' => 'Starter', 'slug' => 'starter', 'price_minor' => 0, 'commission_bps' => 450,
                 'description' => 'Try TUVIO with one event, on us.',
                 'interval' => 'monthly', 'trial_days' => 0,
                 'event_limit' => 1, 'lifetime_event_limit' => true,
@@ -27,7 +27,7 @@ class SubscriptionPlanSeeder extends Seeder
                 'sort' => 1,
             ],
             [
-                'name' => 'Professional', 'slug' => 'professional', 'price_minor' => 0, 'commission_bps' => 1000,
+                'name' => 'Professional', 'slug' => 'professional', 'price_minor' => 0, 'commission_bps' => 450,
                 'description' => 'Everything to sell out your events, with no monthly fee. You only pay when you sell.',
                 'interval' => 'monthly', 'trial_days' => 0,
                 'event_limit' => 25, 'lifetime_event_limit' => false,

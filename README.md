@@ -88,7 +88,8 @@ Default admin after seeding: **admin@ticketflow.test** / `password`.
 |-----|---------|
 | `DB_*` | PostgreSQL connection (database `ticketflow`) |
 | `TICKETFLOW_CURRENCY` | Default currency (UGX) |
-| `TICKETFLOW_COMMISSION_BPS` | Platform commission in basis points (500 = 5%) |
+| `TICKETFLOW_COMMISSION_BPS` | Default platform commission in basis points (450 = 4.5%); plans set their own |
+| `TICKETFLOW_TAX_BPS` | Tax on the platform fee in basis points (default 0 = no tax; 1800 = 18% VAT) |
 | `TICKETFLOW_CONTRIBUTION_COMMISSION_BPS` | Commission on contributions |
 | `TICKETFLOW_RESERVATION_MINUTES` | Unpaid-order inventory hold |
 | `FLW_PUBLIC_KEY` / `FLW_SECRET_KEY` / `FLW_ENCRYPTION_KEY` / `FLW_WEBHOOK_SECRET` | Flutterwave sandbox |

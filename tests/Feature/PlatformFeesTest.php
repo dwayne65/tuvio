@@ -69,24 +69,24 @@ class PlatformFeesTest extends TestCase
         return (int) $txn->entries()->where('direction', 'credit')->whereHas('account', fn ($q) => $q->where('code', $code))->sum('amount_minor');
     }
 
-    public function test_professional_takes_ten_percent_plus_tax_from_the_organizer(): void
+    public function test_professional_takes_four_and_a_half_percent_plus_tax_from_the_organizer(): void
     {
         [, $org] = $this->organizerOn('professional');
         [$event, $type] = $this->eventFor($org); // 100,000.00 per ticket
 
         $order = app(OrderService::class)->create($event, ['name' => 'B', 'email' => 'b@example.com'], [['ticket_type_id' => $type->id, 'quantity' => 2]]);
 
-        // 200,000.00 sale: 10% commission 20,000.00 and 18% tax on it 3,600.00, both off the organizer.
+        // 200,000.00 sale: 4.5% commission 9,000.00 and 18% tax on it 1,620.00, both off the organizer.
         $this->assertSame(20000000, $order->total_minor);
-        $this->assertSame(2000000, $order->commission_minor);
-        $this->assertSame(360000, $order->tax_minor);
-        $this->assertSame(17640000, $order->organizerNetMinor());
+        $this->assertSame(900000, $order->commission_minor);
+        $this->assertSame(162000, $order->tax_minor);
+        $this->assertSame(18938000, $order->organizerNetMinor());
 
         $txn = $this->pay($order);
         $this->assertTrue($txn->isBalanced());
-        $this->assertSame(2000000, $this->credited($txn, 'COMMISSION_INCOME'));
-        $this->assertSame(360000, $this->credited($txn, 'TAX_PAYABLE'));
-        $this->assertSame(17640000, $this->credited($txn, 'ORGANIZER_PAYABLE'));
+        $this->assertSame(900000, $this->credited($txn, 'COMMISSION_INCOME'));
+        $this->assertSame(162000, $this->credited($txn, 'TAX_PAYABLE'));
+        $this->assertSame(18938000, $this->credited($txn, 'ORGANIZER_PAYABLE'));
     }
 
     public function test_enterprise_fee_is_three_point_seven_percent_and_buyer_can_pay_it_with_tax(): void

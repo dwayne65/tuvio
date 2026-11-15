@@ -355,15 +355,15 @@ class CheckoutPaymentTest extends TestCase
         $event->update(['fee_payer' => 'buyer']);
         $this->post("/events/{$event->slug}/checkout", ['items' => [['ticket_type_id' => $type->id, 'quantity' => 2]]]);
 
-        // 2 x 50,000 = 100,000 plus the 5% booking fee.
+        // 2 x 50,000 = 100,000 plus the 4.5% booking fee.
         $this->get('/checkout')->assertInertia(fn ($page) => $page
             ->where('subtotal_minor', 10000000)
-            ->where('fee_minor', 500000)
-            ->where('total_minor', 10500000));
+            ->where('fee_minor', 450000)
+            ->where('total_minor', 10450000));
 
         $this->post('/checkout', ['name' => 'Buyer', 'email' => 'buyer@example.com', 'phone' => '0761664422', 'payment_method' => 'card'], ['X-Inertia' => 'true'])
             ->assertStatus(409);
-        $this->assertSame(10500000, Order::sole()->total_minor);
-        Http::assertSent(fn ($request) => $request->url() === self::BASE.'purchases/' && $request['purchase']['products'][0]['price'] === 105000);
+        $this->assertSame(10450000, Order::sole()->total_minor);
+        Http::assertSent(fn ($request) => $request->url() === self::BASE.'purchases/' && $request['purchase']['products'][0]['price'] === 104500);
     }
 }

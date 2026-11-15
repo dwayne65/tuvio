@@ -73,7 +73,7 @@ export default function Pricing({ plans, capabilities, currency }: PageProps<{ p
                     You only pay when you <span className="text-brand-500">sell</span>
                 </h1>
                 <p className="mx-auto mt-4 max-w-2xl text-slate-500">
-                    Get every growth tool on Professional for free. A small fee comes out of each paid ticket, plus {app.tax.label}. Selling a lot? Enterprise has the lowest
+                    Get every growth tool on Professional for free. A small fee comes out of each paid ticket{app.tax.bps > 0 ? `, plus ${app.tax.label}` : ', with no tax added'}. Selling a lot? Enterprise has the lowest
                     fee on TUVIO. Free tickets are always free.
                 </p>
                 <TrustStrip />
@@ -196,7 +196,7 @@ export function PlanCard({ plan, action, plans }: { plan: Plan; action?: ReactNo
                 <span className="text-sm text-slate-500">Fee per paid ticket</span>
                 <span className="text-right">
                     <span className="text-xl font-extrabold text-brand-500">{rate(plan.commission_bps)}</span>
-                    <span className="block text-[11px] font-semibold text-slate-400">+ {app.tax.label} on the fee</span>
+                    <span className="block text-[11px] font-semibold text-slate-400">{app.tax.bps > 0 ? `+ ${app.tax.label} on the fee` : 'No tax added'}</span>
                 </span>
             </div>
             {plan.lifetime_event_limit && (
@@ -255,7 +255,7 @@ function SavingsCalculator({ plans, currency }: { plans: Plan[]; currency: strin
                 <div className="max-w-md">
                     <h2 className="text-2xl font-extrabold tracking-tight text-ink">Which plan pays for itself?</h2>
                     <p className="mt-2 text-sm text-slate-500">
-                        Enter a typical month. We add the plan price to the per-ticket fee and its {app.tax.label} so you see your real cost on each plan.
+                        Enter a typical month. We add the plan price to the per-ticket fee{app.tax.bps > 0 ? ` and its ${app.tax.label}` : ''} so you see your real cost on each plan.
                     </p>
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2 lg:w-[26rem]">
@@ -286,7 +286,7 @@ function SavingsCalculator({ plans, currency }: { plans: Plan[]; currency: strin
                             <p className={cn('mt-3 text-2xl font-extrabold', isBest ? 'text-white' : 'text-ink')}>{money(total, currency)}</p>
                             <p className={cn('mt-1 text-xs', isBest ? 'text-white/80' : 'text-slate-500')}>
                                 {withinLimit
-                                    ? `${money(fees, currency)} in fees and ${app.tax.label} + ${plan.price.minor === 0 ? 'no plan cost' : `${money(plan.price.minor, currency)} plan`}`
+                                    ? `${money(fees, currency)} in fees${app.tax.bps > 0 ? ` and ${app.tax.label}` : ''} + ${plan.price.minor === 0 ? 'no plan cost' : `${money(plan.price.minor, currency)} plan`}`
                                     : `Limited to ${plan.ticket_limit?.toLocaleString()} tickets per event`}
                             </p>
                         </div>
@@ -301,8 +301,16 @@ function SavingsCalculator({ plans, currency }: { plans: Plan[]; currency: strin
 }
 
 function ComparisonTable({ plans, capabilities }: { plans: Plan[]; capabilities: Capabilities }) {
+    const taxBps = usePage<PageProps>().props.app.tax.bps;
     const rows: { label: string; value: (plan: Plan) => ReactNode }[] = [
-        { label: 'Fee per paid ticket', value: (p) => <span className="font-bold text-brand-500">{rate(p.commission_bps)} <span className="text-xs font-semibold text-slate-400">+ tax</span></span> },
+        {
+            label: 'Fee per paid ticket',
+            value: (p) => (
+                <span className="font-bold text-brand-500">
+                    {rate(p.commission_bps)} {taxBps > 0 && <span className="text-xs font-semibold text-slate-400">+ tax</span>}
+                </span>
+            ),
+        },
         { label: 'Plan price', value: (p) => (p.price.minor === 0 ? 'Free' : `${money(p.price.minor, p.price.currency)} / month`) },
         { label: 'Events', value: (p) => eventLimit(p) },
         { label: 'Tickets per event', value: (p) => limit(p.ticket_limit, 'tickets') },
@@ -358,6 +366,7 @@ function No() {
 }
 
 function Faq({ plans }: { plans: Plan[] }) {
+    const taxBps = usePage<PageProps>().props.app.tax.bps;
     const starter = plans.find((p) => p.price.minor === 0);
     const items = [
         {
@@ -378,16 +387,20 @@ function Faq({ plans }: { plans: Plan[] }) {
         },
         {
             q: 'Is Professional really free?',
-            a: 'Yes. There is no monthly fee. We take a small fee from each paid ticket, plus tax on that fee, so you only pay when you sell.',
+            a: `Yes. There is no monthly fee. We take a small fee from each paid ticket${taxBps > 0 ? ', plus tax on that fee' : ''}, so you only pay when you sell.`,
         },
         {
             q: `What is ${starter?.name ?? 'Starter'} for?`,
             a: `${starter?.name ?? 'Starter'} lets you try TUVIO with one event. After that event, switch to Professional in one click. It costs nothing and unlocks analytics, discounts, promoters and a team.`,
         },
-        {
-            q: 'Why is there tax on the fee?',
-            a: 'Our fee is a service, so government tax (VAT) applies to it. It is charged on the fee only, never on your ticket price, and we pay it to the tax authority.',
-        },
+        ...(taxBps > 0
+            ? [
+                  {
+                      q: 'Why is there tax on the fee?',
+                      a: 'Our fee is a service, so government tax (VAT) applies to it. It is charged on the fee only, never on your ticket price, and we pay it to the tax authority.',
+                  },
+              ]
+            : []),
         {
             q: 'Do you charge for free tickets?',
             a: 'Never. The per-ticket fee only applies to paid tickets, and Mobile Money and card charges are already included in it.',
